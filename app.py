@@ -44,17 +44,23 @@ def calculate_indicators(symbol):
 
     latest_data = df.iloc[-1]
 
-   import math
+import math
 
 def clean_data(value):
     """Überprüft, ob der Wert gültig ist, sonst ersetzt er ihn mit None."""
-    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+    if value is None:
         return None
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value) or value > 1e10 or value < -1e10:
+            return None  # Ungültige Werte entfernen
     return value
+
 
   @app.get("/recommendation")
 def get_recommendation():
     best_stock = select_best_stock()
+    
+print("DEBUG: best_stock =", best_stock)  # Debugging-Log für Render-Logs
 
     if best_stock is None:
         return {"message": "Keine gültige Empfehlung gefunden"}
