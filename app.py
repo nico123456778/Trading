@@ -52,7 +52,7 @@ def clean_data(value):
         return None
     return value
 
-    @app.get("/recommendation")
+  @app.get("/recommendation")
 def get_recommendation():
     best_stock = select_best_stock()
 
@@ -60,13 +60,15 @@ def get_recommendation():
         return {"message": "Keine gültige Empfehlung gefunden"}
 
     return {
-        "symbol": best_stock["symbol"],
-        "rsi": clean_data(best_stock.get("rsi")),
-        "macd": clean_data(best_stock.get("macd")),
-        "sma_50": clean_data(best_stock.get("sma_50")),
-        "sma_200": clean_data(best_stock.get("sma_200")),
+        "symbol": best_stock.get("symbol", "Unbekannt"),
+        "rsi": clean_data(best_stock.get("rsi", None)),
+        "macd": clean_data(best_stock.get("macd", None)),
+        "sma_50": clean_data(best_stock.get("sma_50", None)),
+        "sma_200": clean_data(best_stock.get("sma_200", None)),
         "recommendation": best_stock.get("recommendation", "Keine Empfehlung")
     }
+
+    
 
     
 
