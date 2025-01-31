@@ -44,15 +44,26 @@ def calculate_indicators(symbol):
 
     latest_data = df.iloc[-1]
 
-    return {
-        "symbol": symbol,
-        "rsi": latest_data["RSI"],
-        "macd": latest_data["MACD"],
-        "sma_50": latest_data["SMA_50"],
-        "sma_200": latest_data["SMA_200"],
-    }
+   import math
+
+def clean_data(value):
+    """Überprüft, ob der Wert gültig ist, sonst ersetzt er ihn mit None."""
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return None
+    return value
 
 @app.get("/recommendation")
 def get_recommendation():
-    best_stock = calculate_indicators("AAPL")
-    return best_stock
+    best_stock = select_best_stock()
+    
+    if best_stock:
+        return {
+            "symbol": best_stock["symbol"],
+            "rsi": clean_data(best_stock["rsi"]),
+            "macd": clean_data(best_stock["macd"]),
+            "sma_50": clean_data(best_stock["sma_50"]),
+            "sma_200": clean_data(best_stock["sma_200"]),
+            "recommendation": best_stock["recommendation"]
+        }
+    return {"message": "Keine gültige Empfehlung gefunden"}
+
