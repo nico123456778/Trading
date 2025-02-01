@@ -113,11 +113,17 @@ def get_stock_data():
             print(f"Fetching data for {stock}: {indicators}")
 
             # Überprüfe alle Werte und ersetze NaN/Inf durch None
-            for key, value in indicators.items():
-                if isinstance(value, (float, np.float32, np.float64)) and (np.isnan(value) or np.isinf(value)):
-                    indicators[key] = None  # Ersetze ungültige Werte
+            for key in list(indicators.keys()):  # Verwende list(), um KeyError zu vermeiden
+                value = indicators[key]
+                if isinstance(value, (float, np.float32, np.float64)):
+                    if np.isnan(value) or np.isinf(value):
+                        print(f"⚠ WARNUNG: {stock} hat ungültigen Wert bei {key}: {value}")  # Log für Debugging
+                        indicators[key] = None  # Ersetze ungültige Werte
             
             stock_data.append(indicators)
+
+    return {"stocks": stock_data}
+
 
     return {"stocks": stock_data}
 
