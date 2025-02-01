@@ -65,39 +65,38 @@ def calculate_indicators(symbol):
     }
 
 # Funktion zur Auswahl der besten Aktie
-def select_best_stock():
-    best_stock = None
-    best_score = float('-inf')
+@app.get("/recommendation")
+def get_best_stock():
+    try:
+        best_stock = select_best_stock()  # Wählt die beste Aktie aus
+        if not best_stock:
+            return {"error": "Keine Empfehlung verfügbar"}
 
-    for stock in STOCK_LIST:
-        indicators = calculate_indicators(stock)
-        if not indicators:
-            continue
+        # Nachrichten auswerten (später mit KI)
+        news = [
+            {"title": "Marktanalyse: Warum AAPL stark ansteigt", "rating": 9},
+            {"title": "Analysten sehen Potenzial für MSFT", "rating": 8},
+        ]
 
-        # Falls Werte Pandas-Serien sind, extrahiere den letzten Wert mit iloc[-1]
-        rsi_value = indicators["rsi"]
-        macd_value = indicators["macd"]
-        sma_50_value = indicators["sma_50"]
-        sma_200_value = indicators["sma_200"]
+        recommendation = {
+            "symbol": best_stock["symbol"],
+            "rsi": best_stock["rsi"],
+            "macd": best_stock["macd"],
+            "sma_50": best_stock["sma_50"],
+            "sma_200": best_stock["sma_200"],
+            "history": {
+                "dates": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "prices": [150, 152, 149]
+            },
+            "news": news
+        }
 
-        if isinstance(rsi_value, pd.Series):
-            rsi_value = float(rsi_value.iloc[-1])
+        print(f"📊 Empfehlung gesendet: {recommendation}")  # Debugging in den Logs
+        return recommendation
 
-        if isinstance(macd_value, pd.Series):
-            macd_value = float(macd_value.iloc[-1])
-
-        if isinstance(sma_50_value, pd.Series):
-            sma_50_value = float(sma_50_value.iloc[-1])
-
-        if isinstance(sma_200_value, pd.Series):
-            sma_200_value = float(sma_200_value.iloc[-1])
-
-        # Scoring-System für die Aktienauswahl
-        score = 0
-        if rsi_value is not None and rsi_value < 30:  # Überverkauftes Signal
-            score += 2
-        if macd_value is not None and macd_value > 0:  # Positiver MACD-Trend
-            score += 1
+    except Exception as e:
+        print(f"🔥 FEHLER in /recommendation: {str(e)}")  # Fehler in Logs anzeigen
+        return {"error": "Internal Server Error", "details": str(e)}
 
 # Standard-Route für die API (fix für "Not Found"-Fehler)
 import numpy as np  # Importiere NumPy für NaN-Prüfung
