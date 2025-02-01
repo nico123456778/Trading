@@ -177,3 +177,14 @@ def get_recommendation():
 
     db.close()
     return last_recommendation
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# Statische Dateien (z. B. index.html) bereitstellen
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def serve_index():
+    return FileResponse("static/index.html")
+
