@@ -108,16 +108,29 @@ def select_best_stock():
 
 
 # Funktion zur Google News-Abfrage
-def get_stock_news(symbol):
-    url = f"https://www.googleapis.com/customsearch/v1?q={symbol}+Stock+Market+News+OR+Aktien+Nachrichten&cx={GOOGLE_CSE_ID}&key={GOOGLE_API_KEY}"
+import urllib.parse
 
-    response = requests.get(url)
+def get_stock_news(symbol):
+    try:
+        stock = yf.Ticker(symbol)
+        company_name = stock.info.get("shortName", symbol)  # Falls kein Name gefunden wird, bleibt Symbol
+
+        query = f"{company_name} Stock Market News OR {company_name} Aktien Nachrichten OR {company_name} Börsennews"
+        encoded_query = urllib.parse.quote(query)  # URL-Kodierung hinzufügen
+        url = f"https://www.googleapis.com/customsearch/v1?q={encoded_query}&cx={GOOGLE_CSE_ID}&key={GOOGLE_API_KEY}"
+
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            articles = response.json().get("items", [])
+            if articles:
+                return articles[0]["title"] + " - " + articles[0]["link"]
     
-    if response.status_code == 200:
-        articles = response.json().get("items", [])
-        if articles:
-            return articles[0]["title"] + " - " + articles[0]["link"]
+    except Exception as e:
+        print(f"Fehler bei der News-Abfrage für {symbol}: {e}")
+
     return "Keine aktuellen Nachrichten gefunden."
+
 
 # Funktion zur Datenbereinigung
 def clean_data(value):
