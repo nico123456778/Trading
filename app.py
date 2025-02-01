@@ -98,3 +98,7 @@ def select_best_stock():
             score += 2
         if macd_value is not None and macd_value > 0:  # Positiver MACD-Trend
             score += 1
+            
+@app.get("/")
+def home():
+    return {"message": "Trading API is running!"}
