@@ -74,13 +74,12 @@ def select_best_stock():
         if not indicators:
             continue
 
-        # Sichere Einzelwerte extrahieren (letzter Wert der Serie)
+        # Falls Werte Pandas-Serien sind, extrahiere den letzten Wert mit iloc[-1]
         rsi_value = indicators["rsi"]
         macd_value = indicators["macd"]
         sma_50_value = indicators["sma_50"]
         sma_200_value = indicators["sma_200"]
 
-        # Falls einer der Werte eine Pandas-Serie ist, nimm den letzten Wert
         if isinstance(rsi_value, pd.Series):
             rsi_value = rsi_value.iloc[-1]
         if isinstance(macd_value, pd.Series):
@@ -92,11 +91,11 @@ def select_best_stock():
 
         # Scoring-System für die Aktienauswahl
         score = 0
-        if rsi_value < 30:  # Überverkauftes Signal
+        if rsi_value is not None and rsi_value < 30:  # Überverkauftes Signal
             score += 2
-        if macd_value > 0:  # Positiver MACD-Trend
+        if macd_value is not None and macd_value > 0:  # Positiver MACD-Trend
             score += 1
-        if sma_50_value > sma_200_value:  # Bullisches Signal
+        if sma_50_value is not None and sma_200_value is not None and sma_50_value > sma_200_value:  # Bullisches Signal
             score += 1
 
         if score > best_score:
@@ -104,6 +103,7 @@ def select_best_stock():
             best_stock["recommendation"] = "BUY"
 
     return best_stock
+
 
 
 
