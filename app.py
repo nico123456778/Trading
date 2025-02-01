@@ -80,7 +80,7 @@ def select_best_stock():
         sma_50_value = indicators["sma_50"]
         sma_200_value = indicators["sma_200"]
 
-       if isinstance(rsi_value, pd.Series):
+        if isinstance(rsi_value, pd.Series):
     rsi_value = float(rsi_value.iloc[-1])
 if isinstance(macd_value, pd.Series):
     macd_value = float(macd_value.iloc[-1])
