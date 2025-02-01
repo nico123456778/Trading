@@ -111,23 +111,25 @@ def get_stock_data():
         indicators = calculate_indicators(stock)
 
         if indicators:
-            print(f"✅ Data received for {stock}: {indicators}")  # Zeigt die Daten
+            print(f"✅ Data received for {stock}: {indicators}")  # Debugging
 
-            # Stelle sicher, dass alle Werte gültig sind
-            clean_indicators = {}  # Leere neue Dictionary für saubere Werte
-            
-            for key, value in indicators.items():
+            # Erstelle sicheres Dictionary ohne NaN/Inf-Werte
+            clean_indicators = {}
+
+            for key in list(indicators.keys()):
+                value = indicators[key]
+                
+                # Prüfen, ob der Wert ungültig ist
                 if isinstance(value, (float, np.float32, np.float64)):
                     if np.isnan(value) or np.isinf(value):
-                        print(f"⚠ WARNUNG: {stock} hat ungültigen Wert bei {key}: {value}")  # Log
-                        clean_indicators[key] = None  # Ersetze NaN/Inf mit None
+                        print(f"⚠ WARNUNG: {stock} hat ungültigen Wert bei {key}: {value}")
+                        clean_indicators[key] = None  # Ersetze ungültige Werte
                     else:
-                        clean_indicators[key] = value  # Gültigen Wert übernehmen
+                        clean_indicators[key] = round(value, 6)  # Runden für saubere JSON-Werte
                 else:
                     clean_indicators[key] = value  # Falls kein Float, einfach übernehmen
-            
+
             stock_data.append(clean_indicators)  # Speichere bereinigte Daten
 
     print(f"📊 FINAL RETURN DATA: {stock_data}")  # Debugging
     return {"stocks": stock_data}
-
