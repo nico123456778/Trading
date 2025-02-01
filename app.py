@@ -100,14 +100,22 @@ def select_best_stock():
             score += 1
 
 # Standard-Route für die API (fix für "Not Found"-Fehler)
+import numpy as np  # Importiere NumPy für NaN-Prüfung
+
 @app.get("/stocks")
 def get_stock_data():
     stock_data = []  # Liste zur Speicherung der Aktien-Daten
 
     for stock in STOCK_LIST:
         indicators = calculate_indicators(stock)  # Indikatoren berechnen
-        if indicators:  # Falls Daten vorhanden sind, hinzufügen
+        if indicators:
+            # Überprüfe alle Werte und ersetze NaN/Inf durch None
+            for key, value in indicators.items():
+                if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                    indicators[key] = None  # Ersetze ungültige Werte
+
             stock_data.append(indicators)
 
     return {"stocks": stock_data}  # JSON-Antwort zurückgeben
+
 
