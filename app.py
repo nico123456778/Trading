@@ -3,12 +3,15 @@ import time
 import pandas as pd
 import yfinance as yf
 import requests
+import numpy as np  # Importiere NumPy für NaN-Prüfung
 from fastapi import FastAPI
 from sqlalchemy import create_engine, Column, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
 import math
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # FastAPI App erstellen
 app = FastAPI()
@@ -65,75 +68,44 @@ def calculate_indicators(symbol):
     }
 
 # Funktion zur Auswahl der besten Aktie
-@app.get("/recommendation")
-def get_best_stock():
-    try:
-        best_stock = select_best_stock()  # Wählt die beste Aktie aus
-        if not best_stock:
-            return {"error": "Keine Empfehlung verfügbar"}
-
-        # Nachrichten auswerten (später mit KI)
-        news = [
-            {"title": "Marktanalyse: Warum AAPL stark ansteigt", "rating": 9},
-            {"title": "Analysten sehen Potenzial für MSFT", "rating": 8},
-        ]
-
-        recommendation = {
-            "symbol": best_stock["symbol"],
-            "rsi": best_stock["rsi"],
-            "macd": best_stock["macd"],
-            "sma_50": best_stock["sma_50"],
-            "sma_200": best_stock["sma_200"],
-            "history": {
-                "dates": ["2024-01-01", "2024-01-02", "2024-01-03"],
-                "prices": [150, 152, 149]
-            },
-            "news": news
-        }
-
-        print(f"📊 Empfehlung gesendet: {recommendation}")  # Debugging in den Logs
-        return recommendation
-
-    except Exception as e:
-        print(f"🔥 FEHLER in /recommendation: {str(e)}")  # Fehler in Logs anzeigen
-        return {"error": "Internal Server Error", "details": str(e)}
-
-# Standard-Route für die API (fix für "Not Found"-Fehler)
-import numpy as np  # Importiere NumPy für NaN-Prüfung
-
-@app.get("/stocks")
-def get_stock_data():
-    stock_data = []
+def select_best_stock():
+    best_stock = None
+    best_score = float('-inf')
 
     for stock in STOCK_LIST:
-        print(f"📡 Fetching data for {stock}...")  # Debugging
         indicators = calculate_indicators(stock)
+        if not indicators:
+            print(f"❌ Keine Daten für {stock}")
+            continue
 
-        if indicators:
-            print(f"✅ Data received for {stock}: {indicators}")  # Debugging
+        # Falls Werte Pandas-Serien sind, extrahiere den letzten Wert mit iloc[-1]
+        for key in ["rsi", "macd", "sma_50", "sma_200"]:
+            if isinstance(indicators[key], pd.Series):
+                indicators[key] = indicators[key].iloc[-1]
 
-            # Erstelle sicheres Dictionary ohne Ticker-Objekte oder NaN/Inf-Werte
-            clean_indicators = {}
+        # Debugging: Zeigt die Indikatoren und den Score
+        print(f"📊 Daten für {stock}: {indicators}")
 
-            for key, value in indicators.items():
-                # Falls der Wert ein Pandas- oder Ticker-Objekt ist, konvertieren wir ihn
-                if hasattr(value, "iloc"):  
-                    value = value.iloc[-1]  # Letzten Wert aus Pandas-Serie nehmen
+        # Beispiel-Scoring
+        score = 0
+        if indicators["rsi"] is not None and indicators["rsi"] < 30:  
+            score += 2
+        if indicators["macd"] is not None and indicators["macd"] > 0:  
+            score += 1
 
-                if isinstance(value, (float, np.float32, np.float64)):
-                    if np.isnan(value) or np.isinf(value):
-                        print(f"⚠ WARNUNG: {stock} hat ungültigen Wert bei {key}: {value}")
-                        clean_indicators[key] = None  # Ersetze ungültige Werte
-                    else:
-                        clean_indicators[key] = round(value, 6)  # Runden für JSON-Sicherheit
-                else:
-                    clean_indicators[key] = value  # Falls kein Float, direkt übernehmen
+        # Wähle die beste Aktie
+        if score > best_score:
+            best_score = score
+            best_stock = indicators
 
-            stock_data.append(clean_indicators)  # Speichere bereinigte Daten
+    if best_stock:
+        print(f"✅ Beste Aktie: {best_stock['symbol']} mit Score {best_score}")
+    else:
+        print("❌ Keine Aktie gefunden")
 
-    print(f"📊 FINAL RETURN DATA: {stock_data}")  # Debugging
-    return {"stocks": stock_data}
+    return best_stock
 
+# API-Endpunkt für die beste Aktie
 @app.get("/recommendation")
 def get_best_stock():
     best_stock = select_best_stock()  # Wählt die beste Aktie aus
@@ -159,10 +131,43 @@ def get_best_stock():
         "news": news
     }
 
-from fastapi.responses import FileResponse
+# API-Endpunkt für Aktienliste
+@app.get("/stocks")
+def get_stock_data():
+    stock_data = []
 
+    for stock in STOCK_LIST:
+        print(f"📡 Fetching data for {stock}...")  # Debugging
+        indicators = calculate_indicators(stock)
+
+        if indicators:
+            print(f"✅ Data received for {stock}: {indicators}")  # Debugging
+
+            # Erstelle sicheres Dictionary ohne Ticker-Objekte oder NaN/Inf-Werte
+            clean_indicators = {}
+
+            for key, value in indicators.items():
+                if hasattr(value, "iloc"):  
+                    value = value.iloc[-1]  # Letzten Wert aus Pandas-Serie nehmen
+
+                if isinstance(value, (float, np.float32, np.float64)):
+                    if np.isnan(value) or np.isinf(value):
+                        print(f"⚠ WARNUNG: {stock} hat ungültigen Wert bei {key}: {value}")
+                        clean_indicators[key] = None  # Ersetze ungültige Werte
+                    else:
+                        clean_indicators[key] = round(value, 6)  # Runden für JSON-Sicherheit
+                else:
+                    clean_indicators[key] = value  
+
+            stock_data.append(clean_indicators)  
+
+    print(f"📊 FINAL RETURN DATA: {stock_data}")  
+    return {"stocks": stock_data}
+
+# Statische Dateien bereitstellen
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Startseite auf `index.html` umleiten
 @app.get("/")
 def read_root():
     return FileResponse("static/index.html")
-
-
