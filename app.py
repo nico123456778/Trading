@@ -135,3 +135,28 @@ def get_stock_data():
     print(f"📊 FINAL RETURN DATA: {stock_data}")  # Debugging
     return {"stocks": stock_data}
 
+@app.get("/recommendation")
+def get_best_stock():
+    best_stock = select_best_stock()  # Wählt die beste Aktie aus
+    if not best_stock:
+        return {"error": "Keine Empfehlung verfügbar"}
+
+    # Nachrichten auswerten (später mit KI)
+    news = [
+        {"title": "Marktanalyse: Warum AAPL stark ansteigt", "rating": 9},
+        {"title": "Analysten sehen Potenzial für MSFT", "rating": 8},
+    ]
+
+    return {
+        "symbol": best_stock["symbol"],
+        "rsi": best_stock["rsi"],
+        "macd": best_stock["macd"],
+        "sma_50": best_stock["sma_50"],
+        "sma_200": best_stock["sma_200"],
+        "history": {
+            "dates": ["2024-01-01", "2024-01-02", "2024-01-03"],
+            "prices": [150, 152, 149]
+        },
+        "news": news
+    }
+
