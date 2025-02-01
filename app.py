@@ -103,3 +103,15 @@ def select_best_stock():
 @app.get("/")
 def home():
     return {"message": "Trading API is running!"}
+
+@app.get("/stocks")
+def get_stock_data():
+    stock_data = []
+    
+    for stock in STOCK_LIST:
+        indicators = calculate_indicators(stock)
+        if indicators:
+            stock_data.append(indicators)
+    
+    return {"stocks": stock_data}
+
