@@ -100,7 +100,7 @@ def select_best_stock():
             score += 1
 
 # Standard-Route für die API (fix für "Not Found"-Fehler)
-import numpy as np  # Sicherstellen, dass NumPy importiert ist
+import numpy as np  # Importiere NumPy für NaN-Prüfung
 
 @app.get("/stocks")
 def get_stock_data():
@@ -112,15 +112,19 @@ def get_stock_data():
 
         if indicators:
             print(f"✅ Data received for {stock}: {indicators}")  # Debugging
-            
-            # Sicherstellen, dass keine ungültigen Werte enthalten sind
+
+            # Erstelle sicheres Dictionary ohne Ticker-Objekte oder NaN/Inf-Werte
             clean_indicators = {}
 
             for key, value in indicators.items():
+                # Falls der Wert ein Pandas- oder Ticker-Objekt ist, konvertieren wir ihn
+                if hasattr(value, "iloc"):  
+                    value = value.iloc[-1]  # Letzten Wert aus Pandas-Serie nehmen
+
                 if isinstance(value, (float, np.float32, np.float64)):
                     if np.isnan(value) or np.isinf(value):
                         print(f"⚠ WARNUNG: {stock} hat ungültigen Wert bei {key}: {value}")
-                        clean_indicators[key] = "INVALID"  # Ersetze mit Debug-Wert
+                        clean_indicators[key] = None  # Ersetze ungültige Werte
                     else:
                         clean_indicators[key] = round(value, 6)  # Runden für JSON-Sicherheit
                 else:
@@ -130,3 +134,4 @@ def get_stock_data():
 
     print(f"📊 FINAL RETURN DATA: {stock_data}")  # Debugging
     return {"stocks": stock_data}
+
