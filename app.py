@@ -109,7 +109,7 @@ def get_stock_data():
     for stock in STOCK_LIST:
         indicators = calculate_indicators(stock)  # Indikatoren berechnen
         if indicators:
-            # Überprüfe alle Werte und ersetze NaN/Inf durch None
+            # Überprüfe alle Werte und ersetze NaN/inf durch None
             for key, value in indicators.items():
                 if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
                     indicators[key] = None  # Ersetze ungültige Werte
