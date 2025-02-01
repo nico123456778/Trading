@@ -74,13 +74,19 @@ def select_best_stock():
         if not indicators:
             continue
 
-        # Scoring-System für Aktienempfehlung
+        # Sichere Einzelwerte extrahieren
+        rsi_value = indicators["rsi"]
+        macd_value = indicators["macd"]
+        sma_50_value = indicators["sma_50"]
+        sma_200_value = indicators["sma_200"]
+
+        # Scoring-System für die Aktienauswahl
         score = 0
-        if indicators["rsi"] < 30:  # Überverkauftes Signal
+        if rsi_value < 30:  # Überverkauftes Signal
             score += 2
-        if indicators["macd"] > 0:  # Positiver MACD-Trend
+        if macd_value > 0:  # Positiver MACD-Trend
             score += 1
-        if indicators["sma_50"] > indicators["sma_200"]:  # Bullisches Signal
+        if sma_50_value > sma_200_value:  # Bullisches Signal
             score += 1
 
         if score > best_score:
@@ -88,6 +94,7 @@ def select_best_stock():
             best_stock["recommendation"] = "BUY"
 
     return best_stock
+
 
 # Funktion zur Google News-Abfrage
 def get_stock_news(symbol):
