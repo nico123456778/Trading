@@ -109,7 +109,8 @@ def select_best_stock():
 
 # Funktion zur Google News-Abfrage
 def get_stock_news(symbol):
-    url = f"https://www.googleapis.com/customsearch/v1?q={symbol}+Aktien+Nachrichten&cx={GOOGLE_CSE_ID}&key={GOOGLE_API_KEY}"
+    url = f"https://www.googleapis.com/customsearch/v1?q={symbol}+Stock+Market+News+OR+Aktien+Nachrichten&cx={GOOGLE_CSE_ID}&key={GOOGLE_API_KEY}"
+
     response = requests.get(url)
     
     if response.status_code == 200:
