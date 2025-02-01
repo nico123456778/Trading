@@ -160,3 +160,10 @@ def get_best_stock():
         "news": news
     }
 
+from fastapi.responses import FileResponse
+
+@app.get("/")
+def read_root():
+    return FileResponse("static/index.html")
+
+
