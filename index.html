@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading-App - Aktienempfehlung</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: auto;
+        }
+        h1 {
+            color: #333;
+        }
+        .stock-info {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .recommendation {
+            font-size: 24px;
+            color: green;
+            font-weight: bold;
+        }
+        .news {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .news a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .news a:hover {
+            text-decoration: underline;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        iframe {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Aktuelle Aktienempfehlung</h1>
+        <div class="stock-info" id="stock-symbol">Lädt...</div>
+        <div class="recommendation" id="stock-recommendation">Lädt...</div>
+        <iframe id="chart" src=""></iframe>
+        <div class="news" id="news"></div>
+        <button onclick="loadRecommendation()">Neue Empfehlung laden</button>
+    </div>
+    
+    <script>
+        function loadRecommendation() {
+            fetch("/recommendation")
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("stock-symbol").innerText = "Empfohlene Aktie: " + data.symbol;
+                    document.getElementById("stock-recommendation").innerText = "Empfehlung: " + data.recommendation;
+                    document.getElementById("chart").src = `https://www.tradingview.com/chart/?symbol=${data.symbol}`;
+                    
+                    let newsSection = document.getElementById("news");
+                    newsSection.innerHTML = "<h2>Aktuelle Nachrichten:</h2>";
+                    if (data.news && data.news.length > 0) {
+                        let newsArray = data.news.split('; ');
+                        newsArray.forEach(newsItem => {
+                            let parts = newsItem.split(" - ");
+                            if (parts.length == 2) {
+                                let title = parts[0];
+                                let link = parts[1];
+                                newsSection.innerHTML += `<p><a href="${link}" target="_blank">${title}</a></p>`;
+                            }
+                        });
+                    } else {
+                        newsSection.innerHTML += "<p>Keine aktuellen Nachrichten gefunden.</p>";
+                    }
+                })
+                .catch(error => {
+                    console.error("Fehler beim Abrufen der Empfehlung:", error);
+                });
+        }
+        
+        window.onload = loadRecommendation;
+    </script>
+</body>
+</html>
