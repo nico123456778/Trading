@@ -122,14 +122,17 @@ def get_stock_news(symbol):
         response = requests.get(url)
 
         if response.status_code == 200:
-            articles = response.json().get("items", [])
+            data = response.json()
+            articles = data.get("items", [])  # Holt alle Ergebnisse
             if articles:
-                return articles[0]["title"] + " - " + articles[0]["link"]
+                top_news = [f"{article['title']} - {article['link']}" for article in articles[:3]]
+                return "; ".join(top_news)  # Gibt bis zu 3 News zurück
     
     except Exception as e:
         print(f"Fehler bei der News-Abfrage für {symbol}: {e}")
 
     return "Keine aktuellen Nachrichten gefunden."
+
 
 
 # Funktion zur Datenbereinigung
