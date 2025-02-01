@@ -117,7 +117,7 @@ def get_stock_news(symbol):
 
         query = f"{company_name} Stock Market News OR {company_name} Aktien Nachrichten OR {company_name} Börsennews"
         encoded_query = urllib.parse.quote(query)  # URL-Kodierung hinzufügen
-        url = f"https://www.googleapis.com/customsearch/v1?q={encoded_query}&cx={GOOGLE_CSE_ID}&key={GOOGLE_API_KEY}"
+        url = f"https://www.googleapis.com/customsearch/v1?q={encoded_query}&cx=31902bd89c35c40f8&key=AIzaSyBOfkVh3X1lU4LvNExRmVZnEEX2PKuR7KA"
 
         response = requests.get(url)
 
@@ -132,6 +132,7 @@ def get_stock_news(symbol):
         print(f"Fehler bei der News-Abfrage für {symbol}: {e}")
 
     return "Keine aktuellen Nachrichten gefunden."
+
 
 
 
