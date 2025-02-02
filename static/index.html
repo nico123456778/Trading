@@ -4,30 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trading-App - Kaufempfehlung</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
             text-align: center;
+            background-color: #f8f9fa;
         }
         .container {
-            max-width: 900px;
-            margin: 40px auto;
+            width: 80%;
+            margin: auto;
             padding: 20px;
             background: white;
             border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
         .highlight {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: bold;
             color: #007bff;
         }
         table {
             width: 100%;
-            margin-top: 20px;
+            margin: 20px auto;
             border-collapse: collapse;
         }
         th, td {
@@ -35,108 +34,84 @@
             padding: 10px;
             text-align: left;
         }
-        .news-box {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f1f1f1;
-            border-radius: 8px;
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        canvas {
+            width: 100%;
+            height: 400px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="mb-4">🚀 Top Aktienempfehlung</h1>
-        <p class="highlight" id="recommended-stock">Lädt...</p>
-        <canvas id="stockChart"></canvas>
 
-        <h2 class="mt-4">📊 Technische Indikatoren</h2>
-        <table class="table table-bordered">
-            <tr><th>Indikator</th><th>Wert</th></tr>
-            <tr><td>RSI</td><td id="rsi">Lädt...</td></tr>
-            <tr><td>MACD</td><td id="macd">Lädt...</td></tr>
-            <tr><td>SMA50</td><td id="sma50">Lädt...</td></tr>
-            <tr><td>SMA200</td><td id="sma200">Lädt...</td></tr>
+    <div class="container">
+        <h1>🚀 Top Aktienempfehlung</h1>
+        <h2 class="highlight" id="stockSymbol">Lädt...</h2>
+        <p>Analyse basierend auf technischen Indikatoren & News.</p>
+
+        <h3>📊 Technische Indikatoren</h3>
+        <table>
+            <tr><th>RSI</th><td id="rsi">-</td></tr>
+            <tr><th>MACD</th><td id="macd">-</td></tr>
+            <tr><th>SMA 50</th><td id="sma50">-</td></tr>
+            <tr><th>SMA 200</th><td id="sma200">-</td></tr>
         </table>
 
-        <div class="news-box">
-            <h3>📰 Neueste News</h3>
-            <p id="news">Lädt...</p>
-        </div>
+        <h3>📈 Kursverlauf</h3>
+        <canvas id="stockChart"></canvas>
+
+        <h3>📰 Wichtige Nachrichten</h3>
+        <ul id="newsList">
+            <li>Lädt...</li>
+        </ul>
     </div>
-    
+
     <script>
-        async function fetchRecommendation() {
-            const response = await fetch('/recommendation');
-            const data = await response.json();
-            document.getElementById("recommended-stock").innerText = data.recommended_stock;
-            document.getElementById("rsi").innerText = data.rsi;
-            document.getElementById("macd").innerText = data.macd;
-            document.getElementById("sma50").innerText = data.sma50;
-            document.getElementById("sma200").innerText = data.sma200;
-            document.getElementById("news").innerText = data.news;
-        }
-        fetchRecommendation();
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+        async function loadStockData() {
+            try {
+                const response = await fetch("/recommendation");
+                const data = await response.json();
+                
+                document.getElementById("stockSymbol").innerText = data.symbol || "Keine Empfehlung";
+                document.getElementById("rsi").innerText = data.rsi !== null ? data.rsi.toFixed(2) : "N/A";
+                document.getElementById("macd").innerText = data.macd !== null ? data.macd.toFixed(2) : "N/A";
+                document.getElementById("sma50").innerText = data.sma_50 !== null ? data.sma_50.toFixed(2) : "N/A";
+                document.getElementById("sma200").innerText = data.sma_200 !== null ? data.sma_200.toFixed(2) : "N/A";
 
-<script>
-    async function fetchRecommendation() {
-        const response = await fetch('/recommendation');
-        const data = await response.json();
-        document.getElementById("recommended-stock").innerText = data.recommended_stock;
-        document.getElementById("rsi").innerText = data.rsi;
-        document.getElementById("macd").innerText = data.macd;
-        document.getElementById("sma50").innerText = data.sma50;
-        document.getElementById("sma200").innerText = data.sma200;
-        document.getElementById("news").innerText = "Sentiment: " + data.sentiment;
-        
-        fetchStockData(data.recommended_stock);
-    }
-
-    async function fetchStockData(symbol) {
-        const response = await fetch(`https://query1.finance.yahoo.com/v7/finance/download/${symbol}?period1=1640995200&period2=1735689600&interval=1d&events=history&includeAdjustedClose=true`);
-        const text = await response.text();
-        const rows = text.split("\n").slice(1);
-        let stockData = [];
-        
-        rows.forEach(row => {
-            const cols = row.split(",");
-            if (cols.length >= 6) {
-                stockData.push({
-                    t: new Date(cols[0]).getTime(),
-                    o: parseFloat(cols[1]),
-                    h: parseFloat(cols[2]),
-                    l: parseFloat(cols[3]),
-                    c: parseFloat(cols[4])
+                loadStockChart(data.history);
+                
+                const newsList = document.getElementById("newsList");
+                newsList.innerHTML = "";
+                data.news.forEach(news => {
+                    const listItem = document.createElement("li");
+                    listItem.innerText = `${news.title} - Bewertung: ${news.rating}/10`;
+                    newsList.appendChild(listItem);
                 });
+            } catch (error) {
+                console.error("Fehler beim Laden der API-Daten:", error);
             }
-        });
-        createChart(stockData);
-    }
+        }
 
-    function createChart(stockData) {
-        const ctx = document.getElementById("stockChart").getContext("2d");
-        new Chart(ctx, {
-            type: "candlestick",
-            data: {
-                datasets: [{
-                    label: "Kursverlauf",
-                    data: stockData,
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: { type: "time", time: { unit: "day" } },
-                    y: { beginAtZero: false }
+        function loadStockChart(history) {
+            const ctx = document.getElementById("stockChart").getContext("2d");
+            new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: history.dates,
+                    datasets: [{
+                        label: "Kursverlauf",
+                        data: history.prices,
+                        borderColor: "blue",
+                        fill: false
+                    }]
                 }
-            }
-        });
-    }
-    
-    fetchRecommendation();
-</script>
+            });
+        }
 
+        window.onload = loadStockData;
     </script>
+
 </body>
 </html>
