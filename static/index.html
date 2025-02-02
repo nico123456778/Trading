@@ -76,6 +76,67 @@
             document.getElementById("news").innerText = data.news;
         }
         fetchRecommendation();
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+
+<script>
+    async function fetchRecommendation() {
+        const response = await fetch('/recommendation');
+        const data = await response.json();
+        document.getElementById("recommended-stock").innerText = data.recommended_stock;
+        document.getElementById("rsi").innerText = data.rsi;
+        document.getElementById("macd").innerText = data.macd;
+        document.getElementById("sma50").innerText = data.sma50;
+        document.getElementById("sma200").innerText = data.sma200;
+        document.getElementById("news").innerText = "Sentiment: " + data.sentiment;
+        
+        fetchStockData(data.recommended_stock);
+    }
+
+    async function fetchStockData(symbol) {
+        const response = await fetch(`https://query1.finance.yahoo.com/v7/finance/download/${symbol}?period1=1640995200&period2=1735689600&interval=1d&events=history&includeAdjustedClose=true`);
+        const text = await response.text();
+        const rows = text.split("\n").slice(1);
+        let stockData = [];
+        
+        rows.forEach(row => {
+            const cols = row.split(",");
+            if (cols.length >= 6) {
+                stockData.push({
+                    t: new Date(cols[0]).getTime(),
+                    o: parseFloat(cols[1]),
+                    h: parseFloat(cols[2]),
+                    l: parseFloat(cols[3]),
+                    c: parseFloat(cols[4])
+                });
+            }
+        });
+        createChart(stockData);
+    }
+
+    function createChart(stockData) {
+        const ctx = document.getElementById("stockChart").getContext("2d");
+        new Chart(ctx, {
+            type: "candlestick",
+            data: {
+                datasets: [{
+                    label: "Kursverlauf",
+                    data: stockData,
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { type: "time", time: { unit: "day" } },
+                    y: { beginAtZero: false }
+                }
+            }
+        });
+    }
+    
+    fetchRecommendation();
+</script>
+
     </script>
 </body>
 </html>
