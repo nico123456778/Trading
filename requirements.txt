@@ -1,6 +1,4 @@
-textblob
 fastapi
 uvicorn
-yfinance
-pandas
-sqlalchemy
+requests
+python-dotenv
