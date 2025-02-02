@@ -80,40 +80,16 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            Chart.register(ChartFinancial, ChartDateAdapter);
+            const { CandlestickController, OhlcController, FinancialElement } = window['chartjs-chart-financial'];
+            Chart.register(CandlestickController, OhlcController, FinancialElement);
             loadStockData();
         });
-
-        async function loadStockData() {
-            try {
-                const response = await fetch("/recommendation");
-                const data = await response.json();
-                
-                document.getElementById("stockSymbol").innerText = data.symbol || "Keine Empfehlung";
-                document.getElementById("rsi").innerText = data.rsi !== null ? data.rsi.toFixed(2) : "N/A";
-                document.getElementById("macd").innerText = data.macd !== null ? data.macd.toFixed(2) : "N/A";
-                document.getElementById("sma50").innerText = data.sma_50 !== null ? data.sma_50.toFixed(2) : "N/A";
-                document.getElementById("sma200").innerText = data.sma_200 !== null ? data.sma_200.toFixed(2) : "N/A";
-
-                loadStockChart(data.history);
-                
-                const newsList = document.getElementById("newsList");
-                newsList.innerHTML = "";
-                data.news.forEach(news => {
-                    const listItem = document.createElement("li");
-                    listItem.innerText = `${news.title} - Bewertung: ${news.rating}/10`;
-                    newsList.appendChild(listItem);
-                });
-            } catch (error) {
-                console.error("Fehler beim Laden der API-Daten:", error);
-            }
-        }
     </script>
 
 <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.1.0"></script>
 
 </body>
 </html>
