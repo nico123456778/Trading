@@ -19,6 +19,10 @@ app = FastAPI()
 # Statische Dateien bereitstellen
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Google API Umgebungsvariablen aus Render laden
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
+
 # Datenbank einrichten (SQLite für einfaches Deployment)
 DATABASE_URL = "sqlite:///./stocks.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -27,6 +31,14 @@ Base = declarative_base()
 
 # Aktienliste
 STOCK_LIST = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX", "AMD", "BA"]
+
+# Test-Endpunkt zum Überprüfen der Umgebungsvariablen
+@app.get("/env-test")
+def test_env():
+    return {
+        "google_api_key": GOOGLE_API_KEY if GOOGLE_API_KEY else "❌ Not found",
+        "google_cse_id": GOOGLE_CSE_ID if GOOGLE_CSE_ID else "❌ Not found"
+    }
 
 # Funktion zur Berechnung technischer Indikatoren
 def calculate_indicators(symbol):
@@ -55,124 +67,60 @@ def select_best_stock():
     best_stock = None
     best_score = float('-inf')
 
-    print("🔍 Starte Auswahl der besten Aktie...")
-
     for stock in STOCK_LIST:
         indicators = calculate_indicators(stock)
         if not indicators:
-            print(f"❌ Keine Daten für {stock}")
             continue
 
-        for key in ["rsi", "macd", "sma_50", "sma_200"]:
-            if isinstance(indicators[key], pd.Series):
-                indicators[key] = indicators[key].iloc[-1]
-
-        print(f"📊 Daten für {stock}: {indicators}")
-
         score = 0
-        if indicators["rsi"] is not None and indicators["rsi"] < 30:  
+        if indicators["rsi"] is not None and indicators["rsi"] < 30:
             score += 2
-        if indicators["macd"] is not None and indicators["macd"] > 0:  
+        if indicators["macd"] is not None and indicators["macd"] > 0:
             score += 1
-
-        print(f"⚖ Bewertung für {stock}: Score {score}")
 
         if score > best_score:
             best_score = score
             best_stock = indicators
 
-    if best_stock:
-        print(f"✅ Beste Aktie: {best_stock['symbol']} mit Score {best_score}")
-    else:
-        print("❌ Keine Aktie gefunden!")
-
     return best_stock
+
+# Google-Suche für relevante Finanznachrichten
+@app.get("/search")
+def search(q: str):
+    if not GOOGLE_API_KEY or not GOOGLE_CSE_ID:
+        return {"error": "Google API Key oder CSE ID fehlt!"}
+    
+    url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "key": GOOGLE_API_KEY,
+        "cx": GOOGLE_CSE_ID,
+        "q": q
+    }
+    response = requests.get(url, params=params)
+    return response.json()
 
 # API-Endpunkt für die beste Aktie
 @app.get("/recommendation")
 def get_best_stock():
-    try:
-        best_stock = select_best_stock()
-        if not best_stock:
-            print("❌ Keine Aktie gefunden")
-            return {"error": "Keine Empfehlung verfügbar"}
+    best_stock = select_best_stock()
+    if not best_stock:
+        return {"error": "Keine Empfehlung verfügbar"}
+    
+    news_response = search(best_stock["symbol"] + " stock news")
+    news = news_response.get("items", []) if news_response else []
 
-        print(f"✅ Beste Aktie ausgewählt: {best_stock}")
-
-        news = [
-            {"title": "Marktanalyse: Warum AAPL stark ansteigt", "rating": 9},
-            {"title": "Analysten sehen Potenzial für MSFT", "rating": 8},
-        ]
-
-        def clean_value(value, key):
-            if isinstance(value, (float, np.float32, np.float64)):
-                if np.isnan(value) or np.isinf(value):
-                    print(f"⚠ WARNUNG: Ungültiger Wert bei {key}: {value}, wird auf None gesetzt")
-                    return None
-                return round(value, 6)
-            return value
-
-        recommendation = {
-            "symbol": best_stock["symbol"],
-            "rsi": clean_value(best_stock["rsi"], "rsi"),
-            "macd": clean_value(best_stock["macd"], "macd"),
-            "sma_50": clean_value(best_stock["sma_50"], "sma_50"),
-            "sma_200": clean_value(best_stock["sma_200"], "sma_200"),
-            "history": {
-                "dates": ["2024-01-01", "2024-01-02", "2024-01-03"],
-                "prices": [150, 152, 149]
-            },
-            "news": news
-        }
-
-        print(f"📊 Empfehlung gesendet: {recommendation}")
-        return recommendation
-
-    except Exception as e:
-        print(f"🔥 FEHLER in /recommendation: {str(e)}")
-        return {"error": "Internal Server Error", "details": str(e)}
+    return {
+        "symbol": best_stock["symbol"],
+        "rsi": best_stock["rsi"],
+        "macd": best_stock["macd"],
+        "sma_50": best_stock["sma_50"],
+        "sma_200": best_stock["sma_200"],
+        "google_api_key": GOOGLE_API_KEY,
+        "google_cse_id": GOOGLE_CSE_ID,
+        "news": news
+    }
 
 # Startseite auf `index.html` umleiten
 @app.get("/")
 def read_root():
     return FileResponse("static/index.html")
-
-@app.get("/api/stock-data")
-def get_stock_data(symbol: str = "GOOGL", timeframe: str = "1D"):
-    """
-    API-Route, die OHLC-Daten (Candlestick) für den ausgewählten Zeitraum liefert.
-    Beispiel: /api/stock-data?symbol=GOOGL&timeframe=1D
-    """
-
-    # Definiere das Intervall für verschiedene Zeiträume
-    timeframe_map = {
-        "1D": "1d",   # Besseres Intervall für Tagesdaten
-        "1W": "5d",   # 5 Tage statt 1 Woche für präzisere Candlesticks
-        "1M": "1d",
-        "6M": "1d",
-        "1Y": "1wk"
-    }
-
-    interval = timeframe_map.get(timeframe, "1d")
-
-    # Hole Daten von Yahoo Finance
-    stock = yf.Ticker(symbol)
-    hist = stock.history(period="6mo", interval=interval)  # Kürzere Periode für bessere Datenqualität
-
-    # Falls keine Daten vorhanden sind, Fehler zurückgeben
-    if hist.empty:
-        return {"error": "Keine Daten gefunden für dieses Symbol oder Intervall."}
-
-    # Daten formatieren für Candlestick-Chart
-    data = []
-    for index, row in hist.iterrows():
-        data.append({
-            "date": index.strftime("%Y-%m-%d"),
-            "open": round(row["Open"], 2),
-            "high": round(row["High"], 2),
-            "low": round(row["Low"], 2),
-            "close": round(row["Close"], 2),
-            "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0
-        })
-
-    return {"symbol": symbol, "candlestick": data}
