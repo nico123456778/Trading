@@ -108,26 +108,46 @@ def clean_value(value, key):
         return round(value, 6)
     return value
 
-# API-Endpunkt für die beste Aktie
+import numpy as np
+
 @app.get("/recommendation")
 def get_best_stock():
-    best_stock = select_best_stock()
-    if not best_stock:
-        return {"error": "Keine Empfehlung verfügbar"}
-    
-    news_response = search(best_stock["symbol"] + " stock news")
-    news = news_response.get("items", []) if news_response else []
-    google_search_url = f"https://www.googleapis.com/customsearch/v1?key={GOOGLE_API_KEY}&cx={GOOGLE_CSE_ID}&q={best_stock['symbol']}+stock+news"
+    try:
+        best_stock = select_best_stock()  # Wählt die beste Aktie aus
+        if not best_stock:
+            return {"error": "Keine Empfehlung verfügbar"}
 
-    return {
-        "symbol": best_stock["symbol"],
-        "rsi": clean_value(best_stock["rsi"], "rsi"),
-        "macd": clean_value(best_stock["macd"], "macd"),
-        "sma_50": clean_value(best_stock["sma_50"], "sma_50"),
-        "sma_200": clean_value(best_stock["sma_200"], "sma_200"),
-        "google_search_url": google_search_url,
-        "news": news
-    }
+        # Nachrichten auswerten (später mit KI)
+        news = [
+            {"title": "Marktanalyse: Warum AAPL stark ansteigt", "rating": 9},
+            {"title": "Analysten sehen Potenzial für MSFT", "rating": 8},
+        ]
+
+        # Bereinige ungültige Werte (NaN oder Inf) für JSON-Kompatibilität
+        safe_recommendation = {}
+        for key, value in best_stock.items():
+            if isinstance(value, (float, np.float32, np.float64)):
+                if np.isnan(value) or np.isinf(value):
+                    print(f"⚠ WARNUNG: {key} hat ungültigen Wert: {value}")
+                    safe_recommendation[key] = None  # Ersetze ungültige Werte mit None
+                else:
+                    safe_recommendation[key] = round(value, 6)  # Runden für JSON-Sicherheit
+            else:
+                safe_recommendation[key] = value  # Falls kein Float, direkt übernehmen
+
+        safe_recommendation["news"] = news
+        safe_recommendation["history"] = {
+            "dates": ["2024-01-01", "2024-01-02", "2024-01-03"],
+            "prices": [150, 152, 149]
+        }
+
+        print(f"📊 Empfehlung gesendet: {safe_recommendation}")  # Debugging in den Logs
+        return safe_recommendation
+
+    except Exception as e:
+        print(f"🔥 FEHLER in /recommendation: {str(e)}")  # Fehler in Logs anzeigen
+        return {"error": "Internal Server Error", "details": str(e)}
+
 
 # Startseite auf `index.html` umleiten
 @app.get("/")
