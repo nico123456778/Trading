@@ -24,19 +24,6 @@ Base = declarative_base()
 # Aktienliste
 STOCK_LIST = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX", "AMD", "BA"]
 
-# Datenbank-Modell definieren
-class StockData(Base):
-    __tablename__ = "stocks"
-    symbol = Column(String, primary_key=True)
-    rsi = Column(Float)
-    macd = Column(Float)
-    sma50 = Column(Float)
-    sma200 = Column(Float)
-    sentiment = Column(Float)
-    last_updated = Column(DateTime, default=datetime.utcnow)
-
-Base.metadata.create_all(bind=engine)
-
 # Indikatoren berechnen
 def calculate_indicators(symbol):
     df = yf.download(symbol, period="6mo", interval="1d")
@@ -49,16 +36,16 @@ def calculate_indicators(symbol):
     df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean()))
     
     return {
-        "SMA50": df["SMA50"].iloc[-1],
-        "SMA200": df["SMA200"].iloc[-1],
-        "MACD": df["MACD"].iloc[-1],
-        "RSI": df["RSI"].iloc[-1],
+        "SMA50": round(df["SMA50"].iloc[-1], 2),
+        "SMA200": round(df["SMA200"].iloc[-1], 2),
+        "MACD": round(df["MACD"].iloc[-1], 2),
+        "RSI": round(df["RSI"].iloc[-1], 2),
     }
 
 # News-Sentiment analysieren
 def analyze_news_sentiment(stock):
-    API_KEY = "DEIN_GOOGLE_SEARCH_API_KEY"
-    SEARCH_ENGINE_ID = "DEINE_CUSTOM_SEARCH_ID"
+    API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
+    SEARCH_ENGINE_ID = os.getenv("GOOGLE_SEARCH_ENGINE_ID")
     query = f"{stock} stock news"
     url = f"https://www.googleapis.com/customsearch/v1?q={query}&key={API_KEY}&cx={SEARCH_ENGINE_ID}"
     
@@ -70,12 +57,14 @@ def analyze_news_sentiment(stock):
             text = item.get("snippet", "")
             sentiment_score += TextBlob(text).sentiment.polarity
     
-    return sentiment_score / 5 if sentiment_score else 0
+    return round(sentiment_score / 5, 2) if sentiment_score else 0
 
 # Beste Aktie auswählen
 def select_best_stock():
     best_stock = None
     best_score = -999
+    best_indicators = None
+    best_sentiment = 0
     
     for stock in STOCK_LIST:
         indicators = calculate_indicators(stock)
@@ -93,10 +82,19 @@ def select_best_stock():
         if score > best_score:
             best_stock = stock
             best_score = score
+            best_indicators = indicators
+            best_sentiment = sentiment
     
-    return best_stock
+    return best_stock, best_indicators, best_sentiment
 
 @app.get("/recommendation")
 def get_recommendation():
-    stock = select_best_stock()
-    return {"recommended_stock": stock}
+    stock, indicators, sentiment = select_best_stock()
+    return {
+        "recommended_stock": stock,
+        "rsi": indicators["RSI"],
+        "macd": indicators["MACD"],
+        "sma50": indicators["SMA50"],
+        "sma200": indicators["SMA200"],
+        "sentiment": sentiment,
+    }
