@@ -110,6 +110,20 @@ def clean_value(value, key):
 
 import numpy as np
 
+def clean_json_data(data):
+    """ Rekursive Funktion zur Bereinigung von JSON-Daten (NaN, Inf ersetzen). """
+    if isinstance(data, dict):
+        return {key: clean_json_data(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [clean_json_data(item) for item in data]
+    elif isinstance(data, (float, np.float32, np.float64)):
+        if np.isnan(data) or np.isinf(data):
+            print(f"⚠ WARNUNG: Ungültiger Wert erkannt: {data}")  # Debugging
+            return None  # Ersetze ungültige Werte
+        return round(data, 6)  # Runden für JSON-Sicherheit
+    else:
+        return data  # Andere Werte bleiben unverändert
+
 @app.get("/recommendation")
 def get_best_stock():
     try:
@@ -123,23 +137,21 @@ def get_best_stock():
             {"title": "Analysten sehen Potenzial für MSFT", "rating": 8},
         ]
 
-        # Bereinige ungültige Werte (NaN oder Inf) für JSON-Kompatibilität
-        safe_recommendation = {}
-        for key, value in best_stock.items():
-            if isinstance(value, (float, np.float32, np.float64)):
-                if np.isnan(value) or np.isinf(value):
-                    print(f"⚠ WARNUNG: {key} hat ungültigen Wert: {value}")
-                    safe_recommendation[key] = None  # Ersetze ungültige Werte mit None
-                else:
-                    safe_recommendation[key] = round(value, 6)  # Runden für JSON-Sicherheit
-            else:
-                safe_recommendation[key] = value  # Falls kein Float, direkt übernehmen
-
-        safe_recommendation["news"] = news
-        safe_recommendation["history"] = {
-            "dates": ["2024-01-01", "2024-01-02", "2024-01-03"],
-            "prices": [150, 152, 149]
+        recommendation = {
+            "symbol": best_stock["symbol"],
+            "rsi": best_stock["rsi"],
+            "macd": best_stock["macd"],
+            "sma_50": best_stock["sma_50"],
+            "sma_200": best_stock["sma_200"],
+            "history": {
+                "dates": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "prices": [150, 152, 149]
+            },
+            "news": news
         }
+
+        # Bereinigung der Daten vor dem JSON-Response
+        safe_recommendation = clean_json_data(recommendation)
 
         print(f"📊 Empfehlung gesendet: {safe_recommendation}")  # Debugging in den Logs
         return safe_recommendation
