@@ -5,102 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trading-App - Kaufempfehlung</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        .container {
-            width: 80%;
-            margin: auto;
-            padding: 20px;
-        }
-        .chart-container {
-            width: 100%;
-            height: 400px;
-        }
-        table {
-            width: 100%;
-            margin: 20px auto;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 10px;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-    </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>🚀 Top Aktienempfehlung</h1>
-        <h2 id="stockSymbol">Lädt...</h2>
-        <p>Analyse basierend auf technischen Indikatoren & News.</p>
+    <h1>🚀 Top Aktienempfehlung</h1>
+    <h2 id="stockSymbol">Lädt...</h2>
+    <p>Analyse basierend auf technischen Indikatoren & News.</p>
 
-        <h3>📊 Technische Indikatoren</h3>
-        <table>
-            <tr><th>RSI</th><td id="rsi">-</td></tr>
-            <tr><th>MACD</th><td id="macd">-</td></tr>
-            <tr><th>SMA 50</th><td id="sma50">-</td></tr>
-            <tr><th>SMA 200</th><td id="sma200">-</td></tr>
-        </table>
+    <table>
+        <tr><th>RSI</th><td id="rsi">-</td></tr>
+        <tr><th>MACD</th><td id="macd">-</td></tr>
+        <tr><th>SMA 50</th><td id="sma50">-</td></tr>
+        <tr><th>SMA 200</th><td id="sma200">-</td></tr>
+    </table>
 
-        <h3>📈 Kursverlauf</h3>
-        <div class="chart-container">
-            <canvas id="stockChart"></canvas>
-        </div>
-
-        <h3>📰 Wichtige Nachrichten</h3>
-        <ul id="newsList">
-            <li>Lädt...</li>
-        </ul>
-    </div>
+    <canvas id="stockChart"></canvas>
 
     <script>
         async function loadStockData() {
-            try {
-                const response = await fetch("https://trading-jqas.onrender.com/recommendation");
-                const data = await response.json();
-                
-                document.getElementById("stockSymbol").innerText = data.symbol;
-                document.getElementById("rsi").innerText = data.rsi !== null ? data.rsi.toFixed(2) : "N/A";
-                document.getElementById("macd").innerText = data.macd !== null ? data.macd.toFixed(2) : "N/A";
-                document.getElementById("sma50").innerText = data.sma_50 !== null ? data.sma_50.toFixed(2) : "N/A";
-                document.getElementById("sma200").innerText = data.sma_200 !== null ? data.sma_200.toFixed(2) : "N/A";
-
-                // Chart-Daten laden
-                loadStockChart(data.history);
-                
-                // News anzeigen
-                const newsList = document.getElementById("newsList");
-                newsList.innerHTML = "";
-                data.news.forEach(news => {
-                    const listItem = document.createElement("li");
-                    listItem.innerText = `${news.title} - Bewertung: ${news.rating}/10`;
-                    newsList.appendChild(listItem);
-                });
-            } catch (error) {
-                console.error("Fehler beim Laden der API-Daten:", error);
-            }
-        }
-
-        function loadStockChart(history) {
-            const ctx = document.getElementById("stockChart").getContext("2d");
-            new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: history.dates,
-                    datasets: [{
-                        label: "Kursverlauf",
-                        data: history.prices,
-                        borderColor: "blue",
-                        fill: false
-                    }]
-                }
-            });
+            const response = await fetch("/recommendation");
+            const data = await response.json();
+            
+            document.getElementById("stockSymbol").innerText = data.symbol || "Keine Empfehlung";
+            document.getElementById("rsi").innerText = data.rsi || "-";
+            document.getElementById("macd").innerText = data.macd || "-";
+            document.getElementById("sma50").innerText = data.sma_50 || "-";
+            document.getElementById("sma200").innerText = data.sma_200 || "-";
         }
 
         window.onload = loadStockData;
