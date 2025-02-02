@@ -146,8 +146,8 @@ def get_stock_data(symbol: str = "GOOGL", timeframe: str = "1D"):
 
     # Definiere das Intervall für verschiedene Zeiträume
     timeframe_map = {
-        "1D": "1h",
-        "1W": "1d",
+        "1D": "1d",   # Besseres Intervall für Tagesdaten
+        "1W": "5d",   # 5 Tage statt 1 Woche für präzisere Candlesticks
         "1M": "1d",
         "6M": "1d",
         "1Y": "1wk"
@@ -155,23 +155,24 @@ def get_stock_data(symbol: str = "GOOGL", timeframe: str = "1D"):
 
     interval = timeframe_map.get(timeframe, "1d")
 
-    # Holen der Daten von Yahoo Finance
+    # Hole Daten von Yahoo Finance
     stock = yf.Ticker(symbol)
-    hist = stock.history(period="1y", interval=interval)
+    hist = stock.history(period="6mo", interval=interval)  # Kürzere Periode für bessere Datenqualität
 
     # Falls keine Daten vorhanden sind, Fehler zurückgeben
     if hist.empty:
-        return {"error": "Keine Daten gefunden"}
+        return {"error": "Keine Daten gefunden für dieses Symbol oder Intervall."}
 
-    # Daten formatieren
+    # Daten formatieren für Candlestick-Chart
     data = []
     for index, row in hist.iterrows():
         data.append({
-            "date": index.strftime("%Y-%m-%d %H:%M:%S"),
+            "date": index.strftime("%Y-%m-%d"),
             "open": round(row["Open"], 2),
             "high": round(row["High"], 2),
             "low": round(row["Low"], 2),
             "close": round(row["Close"], 2),
+            "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0
         })
 
-    return data
+    return {"symbol": symbol, "candlestick": data}
