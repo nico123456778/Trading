@@ -3,19 +3,23 @@ import time
 import pandas as pd
 import yfinance as yf
 import requests
-import numpy as np
+import numpy as np  # Importiere NumPy für NaN-Prüfung
 from fastapi import FastAPI
 from sqlalchemy import create_engine, Column, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
 import math
-from textblob import TextBlob
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # FastAPI App erstellen
 app = FastAPI()
 
-# Datenbank einrichten
+# Statische Dateien bereitstellen
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Datenbank einrichten (SQLite für einfaches Deployment)
 DATABASE_URL = "sqlite:///./stocks.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -24,90 +28,111 @@ Base = declarative_base()
 # Aktienliste
 STOCK_LIST = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX", "AMD", "BA"]
 
-# Hilfsfunktion zum sicheren Konvertieren von Werten
-def safe_float(value):
-    try:
-        val = float(value)
-        if math.isinf(val) or math.isnan(val):
-            return None
-        return round(val, 2)
-    except:
-        return None
-
-# Indikatoren berechnen (mit Fehlerhandling)
+# Funktion zur Berechnung technischer Indikatoren
 def calculate_indicators(symbol):
     df = yf.download(symbol, period="6mo", interval="1d")
+
     if df.empty:
         return None
-    
-    df["SMA50"] = df["Close"].rolling(window=50).mean()
-    df["SMA200"] = df["Close"].rolling(window=200).mean()
+
+    df["SMA_50"] = df["Close"].rolling(window=50).mean()
+    df["SMA_200"] = df["Close"].rolling(window=200).mean()
+    df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean() / df["Close"].pct_change().rolling(14).std()))
     df["MACD"] = df["Close"].ewm(span=12, adjust=False).mean() - df["Close"].ewm(span=26, adjust=False).mean()
-    df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean()))
-    
+
+    latest_data = df.iloc[-1]
+
     return {
-        "SMA50": safe_float(df["SMA50"].iloc[-1]),
-        "SMA200": safe_float(df["SMA200"].iloc[-1]),
-        "MACD": safe_float(df["MACD"].iloc[-1]),
-        "RSI": safe_float(df["RSI"].iloc[-1]),
+        "symbol": symbol,
+        "rsi": latest_data["RSI"],
+        "macd": latest_data["MACD"],
+        "sma_50": latest_data["SMA_50"],
+        "sma_200": latest_data["SMA_200"],
     }
 
-# News-Sentiment analysieren
-def analyze_news_sentiment(stock):
-    API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
-    SEARCH_ENGINE_ID = os.getenv("GOOGLE_SEARCH_ENGINE_ID")
-    query = f"{stock} stock news"
-    url = f"https://www.googleapis.com/customsearch/v1?q={query}&key={API_KEY}&cx={SEARCH_ENGINE_ID}"
-    
-    response = requests.get(url).json()
-    sentiment_score = 0
-    
-    if "items" in response:
-        for item in response["items"][:5]:
-            text = item.get("snippet", "")
-            sentiment_score += TextBlob(text).sentiment.polarity
-    
-    return round(sentiment_score / 5, 2) if sentiment_score else 0
-
-# Beste Aktie auswählen
+# Funktion zur Auswahl der besten Aktie
 def select_best_stock():
     best_stock = None
-    best_score = -999
-    best_indicators = None
-    best_sentiment = 0
-    
+    best_score = float('-inf')
+
+    print("🔍 Starte Auswahl der besten Aktie...")
+
     for stock in STOCK_LIST:
         indicators = calculate_indicators(stock)
-        sentiment = analyze_news_sentiment(stock)
-        
         if not indicators:
+            print(f"❌ Keine Daten für {stock}")
             continue
-        
-        score = 0
-        if indicators["RSI"] and indicators["RSI"] < 30: score += 10
-        if indicators["MACD"] and indicators["MACD"] > 0: score += 10
-        if indicators["SMA50"] and indicators["SMA200"] and indicators["SMA50"] > indicators["SMA200"]: score += 15
-        if sentiment > 0.1: score += 10  # Positiver News-Sentiment
-        
-        if score > best_score:
-            best_stock = stock
-            best_score = score
-            best_indicators = indicators
-            best_sentiment = sentiment
-    
-    return best_stock, best_indicators, best_sentiment
 
+        for key in ["rsi", "macd", "sma_50", "sma_200"]:
+            if isinstance(indicators[key], pd.Series):
+                indicators[key] = indicators[key].iloc[-1]
+
+        print(f"📊 Daten für {stock}: {indicators}")
+
+        score = 0
+        if indicators["rsi"] is not None and indicators["rsi"] < 30:  
+            score += 2
+        if indicators["macd"] is not None and indicators["macd"] > 0:  
+            score += 1
+
+        print(f"⚖ Bewertung für {stock}: Score {score}")
+
+        if score > best_score:
+            best_score = score
+            best_stock = indicators
+
+    if best_stock:
+        print(f"✅ Beste Aktie: {best_stock['symbol']} mit Score {best_score}")
+    else:
+        print("❌ Keine Aktie gefunden!")
+
+    return best_stock
+
+# API-Endpunkt für die beste Aktie
 @app.get("/recommendation")
-def get_recommendation():
-    stock, indicators, sentiment = select_best_stock()
-    if not stock or not indicators:
-        return {"error": "Keine gültigen Daten verfügbar."}
-    
-    return {
-        "recommended_stock": stock,
-        "rsi": indicators.get("RSI", "Keine Daten"),
-        "macd": indicators.get("MACD", "Keine Daten"),
-        "sma50": indicators.get("SMA50", "Keine Daten"),
-        "sma200": indicators.get("SMA200", "Keine Daten"),
-        "sentiment": sentiment,
-    }
+def get_best_stock():
+    try:
+        best_stock = select_best_stock()
+        if not best_stock:
+            print("❌ Keine Aktie gefunden")
+            return {"error": "Keine Empfehlung verfügbar"}
+
+        print(f"✅ Beste Aktie ausgewählt: {best_stock}")
+
+        news = [
+            {"title": "Marktanalyse: Warum AAPL stark ansteigt", "rating": 9},
+            {"title": "Analysten sehen Potenzial für MSFT", "rating": 8},
+        ]
+
+        def clean_value(value, key):
+            if isinstance(value, (float, np.float32, np.float64)):
+                if np.isnan(value) or np.isinf(value):
+                    print(f"⚠ WARNUNG: Ungültiger Wert bei {key}: {value}, wird auf None gesetzt")
+                    return None
+                return round(value, 6)
+            return value
+
+        recommendation = {
+            "symbol": best_stock["symbol"],
+            "rsi": clean_value(best_stock["rsi"], "rsi"),
+            "macd": clean_value(best_stock["macd"], "macd"),
+            "sma_50": clean_value(best_stock["sma_50"], "sma_50"),
+            "sma_200": clean_value(best_stock["sma_200"], "sma_200"),
+            "history": {
+                "dates": ["2024-01-01", "2024-01-02", "2024-01-03"],
+                "prices": [150, 152, 149]
+            },
+            "news": news
+        }
+
+        print(f"📊 Empfehlung gesendet: {recommendation}")
+        return recommendation
+
+    except Exception as e:
+        print(f"🔥 FEHLER in /recommendation: {str(e)}")
+        return {"error": "Internal Server Error", "details": str(e)}
+
+# Startseite auf `index.html` umleiten
+@app.get("/")
+def read_root():
+    return FileResponse("static/index.html")
