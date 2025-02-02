@@ -136,3 +136,42 @@ def get_best_stock():
 @app.get("/")
 def read_root():
     return FileResponse("static/index.html")
+
+@app.get("/api/stock-data")
+def get_stock_data(symbol: str = "GOOGL", timeframe: str = "1D"):
+    """
+    API-Route, die OHLC-Daten (Candlestick) für den ausgewählten Zeitraum liefert.
+    Beispiel: /api/stock-data?symbol=GOOGL&timeframe=1D
+    """
+
+    # Definiere das Intervall für verschiedene Zeiträume
+    timeframe_map = {
+        "1D": "1h",
+        "1W": "1d",
+        "1M": "1d",
+        "6M": "1d",
+        "1Y": "1wk"
+    }
+
+    interval = timeframe_map.get(timeframe, "1d")
+
+    # Holen der Daten von Yahoo Finance
+    stock = yf.Ticker(symbol)
+    hist = stock.history(period="1y", interval=interval)
+
+    # Falls keine Daten vorhanden sind, Fehler zurückgeben
+    if hist.empty:
+        return {"error": "Keine Daten gefunden"}
+
+    # Daten formatieren
+    data = []
+    for index, row in hist.iterrows():
+        data.append({
+            "date": index.strftime("%Y-%m-%d %H:%M:%S"),
+            "open": round(row["Open"], 2),
+            "high": round(row["High"], 2),
+            "low": round(row["Low"], 2),
+            "close": round(row["Close"], 2),
+        })
+
+    return data
