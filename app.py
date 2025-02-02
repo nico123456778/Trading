@@ -80,6 +80,7 @@ def calculate_indicators(symbol):
 
 
 # Funktion zur Auswahl der besten Aktie
+
 def select_best_stock():
     best_stock = None
     best_score = float('-inf')
@@ -90,9 +91,12 @@ def select_best_stock():
             continue
 
         score = 0
-        if indicators["rsi"] is not None and indicators["rsi"].iloc[-1] < 30:
+        rsi_value = indicators["rsi"]
+        macd_value = indicators["macd"]
+
+        if rsi_value is not None and rsi_value < 30:
             score += 2
-        if indicators["macd"] is not None and indicators["macd"].iloc[-1] > 0:
+        if macd_value is not None and macd_value > 0:
             score += 1
 
         if score > best_score:
@@ -100,6 +104,7 @@ def select_best_stock():
             best_stock = indicators
 
     return best_stock
+
 
 # Funktion zur Bereinigung ungültiger Werte
 def clean_value(value, key):
