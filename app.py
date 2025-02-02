@@ -24,7 +24,17 @@ Base = declarative_base()
 # Aktienliste
 STOCK_LIST = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX", "AMD", "BA"]
 
-# Indikatoren berechnen
+# Hilfsfunktion zum sicheren Konvertieren von Werten
+def safe_float(value):
+    try:
+        val = float(value)
+        if math.isinf(val) or math.isnan(val):
+            return None
+        return round(val, 2)
+    except:
+        return None
+
+# Indikatoren berechnen (mit Fehlerhandling)
 def calculate_indicators(symbol):
     df = yf.download(symbol, period="6mo", interval="1d")
     if df.empty:
@@ -36,10 +46,10 @@ def calculate_indicators(symbol):
     df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean()))
     
     return {
-        "SMA50": round(df["SMA50"].iloc[-1], 2),
-        "SMA200": round(df["SMA200"].iloc[-1], 2),
-        "MACD": round(df["MACD"].iloc[-1], 2),
-        "RSI": round(df["RSI"].iloc[-1], 2),
+        "SMA50": safe_float(df["SMA50"].iloc[-1]),
+        "SMA200": safe_float(df["SMA200"].iloc[-1]),
+        "MACD": safe_float(df["MACD"].iloc[-1]),
+        "RSI": safe_float(df["RSI"].iloc[-1]),
     }
 
 # News-Sentiment analysieren
@@ -74,9 +84,9 @@ def select_best_stock():
             continue
         
         score = 0
-        if indicators["RSI"] < 30: score += 10
-        if indicators["MACD"] > 0: score += 10
-        if indicators["SMA50"] > indicators["SMA200"]: score += 15
+        if indicators["RSI"] and indicators["RSI"] < 30: score += 10
+        if indicators["MACD"] and indicators["MACD"] > 0: score += 10
+        if indicators["SMA50"] and indicators["SMA200"] and indicators["SMA50"] > indicators["SMA200"]: score += 15
         if sentiment > 0.1: score += 10  # Positiver News-Sentiment
         
         if score > best_score:
@@ -90,11 +100,14 @@ def select_best_stock():
 @app.get("/recommendation")
 def get_recommendation():
     stock, indicators, sentiment = select_best_stock()
+    if not stock or not indicators:
+        return {"error": "Keine gültigen Daten verfügbar."}
+    
     return {
         "recommended_stock": stock,
-        "rsi": indicators["RSI"],
-        "macd": indicators["MACD"],
-        "sma50": indicators["SMA50"],
-        "sma200": indicators["SMA200"],
+        "rsi": indicators.get("RSI", "Keine Daten"),
+        "macd": indicators.get("MACD", "Keine Daten"),
+        "sma50": indicators.get("SMA50", "Keine Daten"),
+        "sma200": indicators.get("SMA200", "Keine Daten"),
         "sentiment": sentiment,
     }
