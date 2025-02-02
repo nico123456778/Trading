@@ -124,6 +124,55 @@
             });
         }
     </script>
+document.getElementById("timeframe-select").addEventListener("change", async function(event) {
+    const timeframe = event.target.value;
+    await updateChart(timeframe);
+});
+
+async function updateChart(timeframe) {
+    try {
+        const response = await fetch(`/api/stock-data?symbol=GOOGL&timeframe=${timeframe}`);
+        const data = await response.json();
+
+        if (!data || data.length === 0) {
+            console.error("Keine Daten erhalten.");
+            return;
+        }
+
+        const candlestickData = data.map(d => ({
+            t: new Date(d.date),
+            o: d.open,
+            h: d.high,
+            l: d.low,
+            c: d.close
+        }));
+
+        if (window.stockChart) {
+            window.stockChart.data.datasets[0].data = candlestickData;
+            window.stockChart.update();
+        } else {
+            const ctx = document.getElementById("stock-chart").getContext("2d");
+            window.stockChart = new Chart(ctx, {
+                type: "candlestick",
+                data: {
+                    datasets: [{
+                        label: "Stock Price",
+                        data: candlestickData
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { type: "time", time: { unit: "day" } },
+                        y: { beginAtZero: false }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Fehler beim Laden der Daten:", error);
+    }
+}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
