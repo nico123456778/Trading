@@ -40,6 +40,21 @@ def test_env():
         "google_cse_id": GOOGLE_CSE_ID if GOOGLE_CSE_ID else "❌ Not found"
     }
 
+# Google-Suche für relevante Finanznachrichten
+@app.get("/search")
+def search(q: str):
+    if not GOOGLE_API_KEY or not GOOGLE_CSE_ID:
+        return {"error": "Google API Key oder CSE ID fehlt!"}
+    
+    url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "key": GOOGLE_API_KEY,
+        "cx": GOOGLE_CSE_ID,
+        "q": q
+    }
+    response = requests.get(url, params=params)
+    return response.json()
+
 # Funktion zur Berechnung technischer Indikatoren
 def calculate_indicators(symbol):
     df = yf.download(symbol, period="6mo", interval="1d")
@@ -102,6 +117,7 @@ def get_best_stock():
     
     news_response = search(best_stock["symbol"] + " stock news")
     news = news_response.get("items", []) if news_response else []
+    google_search_url = f"https://www.googleapis.com/customsearch/v1?key={GOOGLE_API_KEY}&cx={GOOGLE_CSE_ID}&q={best_stock['symbol']}+stock+news"
 
     return {
         "symbol": best_stock["symbol"],
@@ -109,6 +125,7 @@ def get_best_stock():
         "macd": clean_value(best_stock["macd"], "macd"),
         "sma_50": clean_value(best_stock["sma_50"], "sma_50"),
         "sma_200": clean_value(best_stock["sma_200"], "sma_200"),
+        "google_search_url": google_search_url,
         "news": news
     }
 
