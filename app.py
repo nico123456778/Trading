@@ -74,7 +74,7 @@ def select_best_stock():
 
         score = 0
         if indicators["rsi"] is not None and indicators["rsi"].iloc[-1] < 30:
-        score += 2
+            score += 2
         if indicators["macd"] is not None and indicators["macd"].iloc[-1] > 0:
             score += 1
 
