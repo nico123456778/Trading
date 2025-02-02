@@ -84,20 +84,14 @@ def select_best_stock():
 
     return best_stock
 
-# Google-Suche für relevante Finanznachrichten
-@app.get("/search")
-def search(q: str):
-    if not GOOGLE_API_KEY or not GOOGLE_CSE_ID:
-        return {"error": "Google API Key oder CSE ID fehlt!"}
-    
-    url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        "key": GOOGLE_API_KEY,
-        "cx": GOOGLE_CSE_ID,
-        "q": q
-    }
-    response = requests.get(url, params=params)
-    return response.json()
+# Funktion zur Bereinigung ungültiger Werte
+def clean_value(value, key):
+    if isinstance(value, (float, np.float32, np.float64)):
+        if np.isnan(value) or np.isinf(value):
+            print(f"⚠ WARNUNG: Ungültiger Wert bei {key}: {value}, wird auf None gesetzt")
+            return None
+        return round(value, 6)
+    return value
 
 # API-Endpunkt für die beste Aktie
 @app.get("/recommendation")
@@ -111,12 +105,10 @@ def get_best_stock():
 
     return {
         "symbol": best_stock["symbol"],
-        "rsi": best_stock["rsi"],
-        "macd": best_stock["macd"],
-        "sma_50": best_stock["sma_50"],
-        "sma_200": best_stock["sma_200"],
-        "google_api_key": GOOGLE_API_KEY,
-        "google_cse_id": GOOGLE_CSE_ID,
+        "rsi": clean_value(best_stock["rsi"], "rsi"),
+        "macd": clean_value(best_stock["macd"], "macd"),
+        "sma_50": clean_value(best_stock["sma_50"], "sma_50"),
+        "sma_200": clean_value(best_stock["sma_200"], "sma_200"),
         "news": news
     }
 
