@@ -111,7 +111,7 @@
         function loadStockChart(history) {
             const ctx = document.getElementById("stock-chart").getContext("2d");
             new Chart(ctx, {
-                type: "line",
+                type: "candlestick",
                 data: {
                     labels: history.dates,
                     datasets: [{
