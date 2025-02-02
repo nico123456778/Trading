@@ -80,8 +80,8 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            const { CandlestickController, OhlcController, FinancialElement } = window['chartjs-chart-financial'];
-            Chart.register(CandlestickController, OhlcController, FinancialElement);
+            import { CandlestickController, OhlcController, FinancialElement, FinancialScale } from 'chartjs-chart-financial';
+            Chart.register(CandlestickController, OhlcController, FinancialElement, FinancialScale);
             loadStockData();
         });
     </script>
@@ -89,7 +89,7 @@
 <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.1.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.0.0"></script>
 
 </body>
 </html>
