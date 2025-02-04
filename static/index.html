@@ -59,18 +59,18 @@
             <tr><th>SMA 200</th><td id="sma200">-</td></tr>
         </table>
 
-       <section id="chart">
-    <h2>Kursverlauf</h2>
-    <label for="timeframe-select">Zeitraum:</label>
-    <select id="timeframe-select">
-        <option value="1D">1 Tag</option>
-        <option value="1W">1 Woche</option>
-        <option value="1M">1 Monat</option>
-        <option value="6M">6 Monate</option>
-        <option value="1Y">1 Jahr</option>
-    </select>
-    <canvas id="stock-chart"></canvas>
-</section>
+        <section id="chart">
+            <h2>Kursverlauf</h2>
+            <label for="timeframe-select">Zeitraum:</label>
+            <select id="timeframe-select">
+                <option value="1D">1 Tag</option>
+                <option value="1W">1 Woche</option>
+                <option value="1M">1 Monat</option>
+                <option value="6M">6 Monate</option>
+                <option value="1Y">1 Jahr</option>
+            </select>
+            <canvas id="stock-chart"></canvas>
+        </section>
 
         <h3>📰 Wichtige Nachrichten</h3>
         <ul id="newsList">
@@ -80,10 +80,39 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            import { CandlestickController, OhlcController, FinancialElement, FinancialScale } from 'chartjs-chart-financial';
-            Chart.register(CandlestickController, OhlcController, FinancialElement, FinancialScale);
             loadStockData();
         });
+
+        async function loadStockData() {
+            try {
+                const response = await fetch("/recommendation");
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById("stockSymbol").innerText = "⚠ Keine Empfehlung verfügbar";
+                    return;
+                }
+
+                document.getElementById("stockSymbol").innerText = data.symbol || "Unbekannt";
+                document.getElementById("rsi").innerText = data.rsi !== null ? data.rsi.toFixed(2) : "N/A";
+                document.getElementById("macd").innerText = data.macd !== null ? data.macd.toFixed(2) : "N/A";
+                document.getElementById("sma50").innerText = data.sma_50 !== null ? data.sma_50.toFixed(2) : "N/A";
+                document.getElementById("sma200").innerText = data.sma_200 !== null ? data.sma_200.toFixed(2) : "N/A";
+
+                // News laden
+                const newsList = document.getElementById("newsList");
+                newsList.innerHTML = "";
+                data.news.forEach(news => {
+                    const li = document.createElement("li");
+                    li.innerText = `${news.title} (Rating: ${news.rating})`;
+                    newsList.appendChild(li);
+                });
+
+            } catch (error) {
+                console.error("Fehler beim Laden der Daten:", error);
+                document.getElementById("stockSymbol").innerText = "⚠ Fehler beim Laden der Daten";
+            }
+        }
     </script>
 
 <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
