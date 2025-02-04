@@ -91,8 +91,20 @@ def select_best_stock():
             continue
 
         score = 0
+
+        # Explizit sicherstellen, dass rsi und macd Floats sind
         rsi_value = indicators["rsi"]
         macd_value = indicators["macd"]
+
+        # Falls rsi_value oder macd_value eine Pandas-Serie ist, konvertieren wir sie in Float
+        if isinstance(rsi_value, pd.Series):
+            rsi_value = rsi_value.iloc[-1]  # Letzten Wert nehmen
+        if isinstance(macd_value, pd.Series):
+            macd_value = macd_value.iloc[-1]  # Letzten Wert nehmen
+
+        # Falls Wert immer noch kein Float ist, setzen wir ihn auf None
+        rsi_value = float(rsi_value) if isinstance(rsi_value, (float, int)) else None
+        macd_value = float(macd_value) if isinstance(macd_value, (float, int)) else None
 
         if rsi_value is not None and rsi_value < 30:
             score += 2
@@ -104,6 +116,7 @@ def select_best_stock():
             best_stock = indicators
 
     return best_stock
+
 
 
 # Funktion zur Bereinigung ungültiger Werte
