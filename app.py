@@ -58,10 +58,14 @@ def search(q: str):
 # Funktion zur Berechnung technischer Indikatoren
 
 
+
 def calculate_indicators(symbol):
+    print(f"🔍 Berechne Indikatoren für: {symbol}")  # Debugging
+
     df = yf.download(symbol, period="6mo", interval="1d")
 
     if df.empty:
+        print(f"⚠ Keine Daten für {symbol} gefunden!")
         return None
 
     df["SMA_50"] = df["Close"].rolling(window=50).mean()
@@ -71,42 +75,60 @@ def calculate_indicators(symbol):
 
     latest_data = df.iloc[-1]
 
-    # Konvertiere ALLE Werte sicher in Float oder None
-    return {
+    def safe_float(value, key):
+        """ Konvertiert Werte sicher in Float, sonst None """
+        if isinstance(value, pd.Series):
+            print(f"⚠ WARNUNG: {key} ist eine Pandas-Serie! Extrahiere letzten Wert.")
+            value = value.iloc[-1]
+        if isinstance(value, (float, int)):
+            return float(value)
+        print(f"❌ FEHLER: {key} konnte nicht in Float umgewandelt werden! Setze auf None.")
+        return None
+
+    result = {
         "symbol": symbol,
-        "rsi": float(latest_data["RSI"]) if pd.notna(latest_data["RSI"]) else None,
-        "macd": float(latest_data["MACD"]) if pd.notna(latest_data["MACD"]) else None,
-        "sma_50": float(latest_data["SMA_50"]) if pd.notna(latest_data["SMA_50"]) else None,
-        "sma_200": float(latest_data["SMA_200"]) if pd.notna(latest_data["SMA_200"]) else None,
+        "rsi": safe_float(latest_data["RSI"], "RSI"),
+        "macd": safe_float(latest_data["MACD"], "MACD"),
+        "sma_50": safe_float(latest_data["SMA_50"], "SMA_50"),
+        "sma_200": safe_float(latest_data["SMA_200"], "SMA_200"),
     }
+
+    print(f"✅ Indikatoren für {symbol}: {result}")  # Debugging
+    return result
+
 
 
 
 # Funktion zur Auswahl der besten Aktie
 
 
+
 def select_best_stock():
+    print("🔍 Starte Auswahl der besten Aktie...")  # Debugging
+
     best_stock = None
     best_score = float('-inf')
 
     for stock in STOCK_LIST:
         indicators = calculate_indicators(stock)
         if not indicators:
+            print(f"⚠ Keine Indikatoren für {stock}, überspringe...")
             continue
+
+        print(f"📊 Prüfe Aktie {stock}: {indicators}")  # Debugging
 
         score = 0
 
-        # Explizit sicherstellen, dass rsi und macd Floats sind
         rsi_value = indicators.get("rsi")
         macd_value = indicators.get("macd")
 
-        # Falls None, direkt ignorieren
         if isinstance(rsi_value, pd.Series):
-            rsi_value = rsi_value.iloc[-1] if not rsi_value.empty else None
+            print(f"⚠ WARNUNG: RSI für {stock} ist eine Serie! Extrahiere letzten Wert.")
+            rsi_value = rsi_value.iloc[-1]
         if isinstance(macd_value, pd.Series):
-            macd_value = macd_value.iloc[-1] if not macd_value.empty else None
+            print(f"⚠ WARNUNG: MACD für {stock} ist eine Serie! Extrahiere letzten Wert.")
+            macd_value = macd_value.iloc[-1]
 
-        # Falls immer noch kein Float, setze auf None
         rsi_value = float(rsi_value) if isinstance(rsi_value, (float, int)) else None
         macd_value = float(macd_value) if isinstance(macd_value, (float, int)) else None
 
@@ -115,11 +137,15 @@ def select_best_stock():
         if macd_value is not None and macd_value > 0:
             score += 1
 
+        print(f"📈 Score für {stock}: {score}")
+
         if score > best_score:
             best_score = score
             best_stock = indicators
 
+    print(f"🏆 Beste Aktie: {best_stock}")  # Debugging
     return best_stock
+
 
 
 
