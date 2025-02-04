@@ -57,6 +57,7 @@ def search(q: str):
 
 # Funktion zur Berechnung technischer Indikatoren
 
+
 def calculate_indicators(symbol):
     df = yf.download(symbol, period="6mo", interval="1d")
 
@@ -70,16 +71,19 @@ def calculate_indicators(symbol):
 
     latest_data = df.iloc[-1]
 
+    # Konvertiere ALLE Werte sicher in Float oder None
     return {
         "symbol": symbol,
-        "rsi": latest_data["RSI"].item() if not np.isnan(latest_data["RSI"]) else None,
-        "macd": latest_data["MACD"].item() if not np.isnan(latest_data["MACD"]) else None,
-        "sma_50": latest_data["SMA_50"].item() if not np.isnan(latest_data["SMA_50"]) else None,
-        "sma_200": latest_data["SMA_200"].item() if not np.isnan(latest_data["SMA_200"]) else None,
+        "rsi": float(latest_data["RSI"]) if pd.notna(latest_data["RSI"]) else None,
+        "macd": float(latest_data["MACD"]) if pd.notna(latest_data["MACD"]) else None,
+        "sma_50": float(latest_data["SMA_50"]) if pd.notna(latest_data["SMA_50"]) else None,
+        "sma_200": float(latest_data["SMA_200"]) if pd.notna(latest_data["SMA_200"]) else None,
     }
 
 
+
 # Funktion zur Auswahl der besten Aktie
+
 
 def select_best_stock():
     best_stock = None
@@ -93,16 +97,16 @@ def select_best_stock():
         score = 0
 
         # Explizit sicherstellen, dass rsi und macd Floats sind
-        rsi_value = indicators["rsi"]
-        macd_value = indicators["macd"]
+        rsi_value = indicators.get("rsi")
+        macd_value = indicators.get("macd")
 
-        # Falls rsi_value oder macd_value eine Pandas-Serie ist, konvertieren wir sie in Float
+        # Falls None, direkt ignorieren
         if isinstance(rsi_value, pd.Series):
-            rsi_value = rsi_value.iloc[-1]  # Letzten Wert nehmen
+            rsi_value = rsi_value.iloc[-1] if not rsi_value.empty else None
         if isinstance(macd_value, pd.Series):
-            macd_value = macd_value.iloc[-1]  # Letzten Wert nehmen
+            macd_value = macd_value.iloc[-1] if not macd_value.empty else None
 
-        # Falls Wert immer noch kein Float ist, setzen wir ihn auf None
+        # Falls immer noch kein Float, setze auf None
         rsi_value = float(rsi_value) if isinstance(rsi_value, (float, int)) else None
         macd_value = float(macd_value) if isinstance(macd_value, (float, int)) else None
 
@@ -116,6 +120,7 @@ def select_best_stock():
             best_stock = indicators
 
     return best_stock
+
 
 
 
