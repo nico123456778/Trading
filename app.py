@@ -135,37 +135,35 @@ def select_best_stock():
 
 @app.get("/recommendation")
 def get_best_stock():
-    try:
-        print(f"DEBUG: best_stock = {best_stock}")
-        best_stock = select_best_stock()
-        if not best_stock:
-            return {"error": "Keine Empfehlung verfügbar"}
+  try:
+    best_stock = select_best_stock()
+    if not best_stock:
+        return {"error": "Keine Empfehlung verfügbar"}
 
-        # Feature-Namen anpassen, damit sie mit dem Modell übereinstimmen
-        features = {
-            "MACD": float(best_stock["MACD"]),  # Großbuchstaben verwenden
-            "RSI": float(best_stock["RSI"]),
-            "SMA200": float(best_stock["SMA200"]) if not pd.isna(best_stock["SMA200"]) else 0.0,
-            "SMA50": float(best_stock["SMA50"])
-        }
+    # Feature-Namen anpassen
+    features = {
+        "MACD": float(best_stock["MACD"]),
+        "RSI": float(best_stock["RSI"]),
+        "SMA200": float(best_stock["SMA200"]) if not pd.isna(best_stock["SMA200"]) else 0.0,
+        "SMA50": float(best_stock["SMA50"])
+    }
 
-        recommendation = clean_json_data({
-            "symbol": best_stock["symbol"],
-            "MACD": features["MACD"],
-            "RSI": features["RSI"],
-            "SMA200": features["SMA200"],
-            "SMA50": features["SMA50"],
-            "ai_signal": ai_predict(best_stock["symbol"], features)
-        })
-print(f"DEBUG: Features an Modell: {features}")
+    recommendation = clean_json_data({
+        "symbol": best_stock["symbol"],
+        "MACD": features["MACD"],
+        "RSI": features["RSI"],
+        "SMA200": features["SMA200"],
+        "SMA50": features["SMA50"],
+        "ai_signal": ai_predict(best_stock["symbol"], features)
+    })
 
-        return recommendation
+    print(f"DEBUG: Features an Modell: {features}")  # ✅ Jetzt innerhalb des try-Blocks!
 
-    except Exception as e:
-        print(f"🔥 FEHLER in /recommendation: {str(e)}")
-        return {"error": "Internal Server Error", "details": str(e)}
+    return recommendation
 
-
+except Exception as e:
+    print(f"🔥 FEHLER in /recommendation: {str(e)}")
+    return {"error": "Internal Server Error", "details": str(e)}
 
 
 @app.get("/")
