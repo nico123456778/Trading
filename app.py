@@ -101,14 +101,21 @@ def get_best_stock():
 
         print(f"DEBUG: best_stock = {best_stock}")
 
-        recommendation = {
-            "symbol": best_stock["symbol"],
-            "MACD": best_stock["MACD"],
-            "RSI": best_stock["RSI"],
-            "SMA200": best_stock["SMA200"],
-            "SMA50": best_stock["SMA50"],
-            "ai_signal": ai_predict(best_stock["symbol"], best_stock)
-        }
+       features_for_model = {
+    "MACD": best_stock["MACD"],
+    "RSI": best_stock["RSI"],
+    "SMA200": best_stock["SMA200"],
+    "SMA50": best_stock["SMA50"]
+}
+
+recommendation = {
+    "symbol": best_stock["symbol"],  # symbol bleibt für die API-Ausgabe erhalten
+    "MACD": best_stock["MACD"],
+    "RSI": best_stock["RSI"],
+    "SMA200": best_stock["SMA200"],
+    "SMA50": best_stock["SMA50"],
+    "ai_signal": ai_predict(best_stock["symbol"], features_for_model)  # ✅ symbol wurde entfernt
+}
 
         print(f"DEBUG: Features an Modell: {recommendation}")
         return recommendation
