@@ -4,3 +4,8 @@ uvicorn
 yfinance
 pandas
 sqlalchemy
+joblib
+scikit-learn
+numpy
+matplotlib
+ta
