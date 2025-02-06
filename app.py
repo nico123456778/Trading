@@ -139,26 +139,30 @@ def get_best_stock():
         best_stock = select_best_stock()
         if not best_stock:
             return {"error": "Keine Empfehlung verfügbar"}
-            # Feature-Namen anpassen, damit sie mit dem Modell übereinstimmen
-features = {
-    "MACD": indicators["macd"],
-    "RSI": indicators["rsi"],
-    "SMA200": indicators["sma_200"],
-    "SMA50": indicators["sma_50"],
-}
+
+        # Feature-Namen anpassen, damit sie mit dem Modell übereinstimmen
+        features = {
+            "MACD": best_stock["macd"],
+            "RSI": best_stock["rsi"],
+            "SMA200": best_stock["sma_200"],
+            "SMA50": best_stock["sma_50"]
+        }
 
         recommendation = clean_json_data({
             "symbol": best_stock["symbol"],
-            "rsi": best_stock["rsi"],
-            "macd": best_stock["macd"],
-            "sma_50": best_stock["sma_50"],
-            "sma_200": best_stock["sma_200"],
-            "ai_signal": ai_predict(best_stock["symbol"], best_stock)
+            "MACD": features["MACD"],
+            "RSI": features["RSI"],
+            "SMA200": features["SMA200"],
+            "SMA50": features["SMA50"],
+            "ai_signal": ai_predict(best_stock["symbol"], features)
         })
+
         return recommendation
+
     except Exception as e:
         print(f"🔥 FEHLER in /recommendation: {str(e)}")
         return {"error": "Internal Server Error", "details": str(e)}
+
 
 @app.get("/")
 def read_root():
