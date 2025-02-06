@@ -93,6 +93,15 @@ def calculate_indicators(symbol):
 
     df["SMA50"] = df["Close"].rolling(window=50).mean()
     df["SMA200"] = df["Close"].rolling(window=200).mean()
+    
+    # Debugging-Log für SMA200 prüfen
+    print(f"📊 {symbol}: Datenpunkte verfügbar = {len(df)} | Letzter SMA200-Wert: {df['SMA200'].iloc[-1]}")
+    
+    # Falls SMA200 NaN ist, nutze SMA50 oder den Durchschnitt der letzten 200 Tage
+    df["SMA200"].fillna(df["SMA50"], inplace=True)  # Falls möglich, SMA50 nutzen
+    df["SMA200"].fillna(df["Close"].rolling(200).mean(), inplace=True)  # Falls noch NaN, Durchschnitt der letzten 200 Tage
+    df["SMA200"].fillna(df["Close"].mean(), inplace=True)  # Falls alles fehlschlägt, nimm den Gesamt-Durchschnitt
+
     df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean() / df["Close"].pct_change().rolling(14).std()))
     df["MACD"] = df["Close"].ewm(span=12, adjust=False).mean() - df["Close"].ewm(span=26, adjust=False).mean()
     latest_data = df.iloc[-1]
@@ -104,29 +113,6 @@ def calculate_indicators(symbol):
     }
     print(f"✅ Indikatoren für {symbol}: {result}")
     return result
-
-# AI-Modell-Vorhersage
-def ai_predict(indicators):
-    df = pd.DataFrame([indicators])
-    prediction = model.predict(df)
-    return int(prediction[0])
-
-# Funktion zur Auswahl der besten Aktie
-def select_best_stock():
-    best_stock = None
-    best_score = float('-inf')
-    for stock in STOCK_LIST:
-        indicators = calculate_indicators(stock)
-        if not indicators:
-            continue
-        ai_signal = ai_predict(indicators)
-        score = sum([2 if indicators["RSI"] < 30 else 0,
-                     1 if indicators["MACD"] > 0 else 0,
-                     3 if ai_signal == 1 else 0])
-        if score > best_score:
-            best_score = score
-            best_stock = indicators
-    return best_stock
 
 @app.get("/recommendation")
 def get_best_stock():
