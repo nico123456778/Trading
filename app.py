@@ -46,16 +46,7 @@ def safe_float(value, key):
     print(f"❌ FEHLER: {key} konnte nicht in Float umgewandelt werden! Setze auf None.")
     return None
 
-# Funktion zur Bereinigung ungültiger Werte
-def clean_value(value, key):
-    if isinstance(value, (float, np.float32, np.float64)):
-        if np.isnan(value) or np.isinf(value):
-            print(f"⚠ WARNUNG: Ungültiger Wert bei {key}: {value}, wird auf None gesetzt")
-            return None
-        return round(value, 6)
-    return value
-
-# Rekursive Bereinigung von JSON-Daten
+# Bereinigung von JSON-Daten
 def clean_json_data(data):
     if isinstance(data, dict):
         return {key: clean_json_data(value) for key, value in data.items()}
@@ -68,21 +59,6 @@ def clean_json_data(data):
         return round(data, 6)
     return data
 
-# Google-Suche für relevante Finanznachrichten
-@app.get("/search")
-def search(q: str):
-    if not GOOGLE_API_KEY or not GOOGLE_CSE_ID:
-        return {"error": "Google API Key oder CSE ID fehlt!"}
-    
-    url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        "key": GOOGLE_API_KEY,
-        "cx": GOOGLE_CSE_ID,
-        "q": q
-    }
-    response = requests.get(url, params=params)
-    return response.json()
-
 # Funktion zur Berechnung technischer Indikatoren
 def calculate_indicators(symbol):
     print(f"🔍 Berechne Indikatoren für: {symbol}")
@@ -91,24 +67,29 @@ def calculate_indicators(symbol):
         print(f"⚠ Keine Daten für {symbol} gefunden!")
         return None
 
-    df["SMA_50"] = df["Close"].rolling(window=50).mean()
-    df["SMA_200"] = df["Close"].rolling(window=200).mean()
+    df["SMA50"] = df["Close"].rolling(window=50).mean()
+    df["SMA200"] = df["Close"].rolling(window=200).mean()
     df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean() / df["Close"].pct_change().rolling(14).std()))
     df["MACD"] = df["Close"].ewm(span=12, adjust=False).mean() - df["Close"].ewm(span=26, adjust=False).mean()
     latest_data = df.iloc[-1]
     result = {
         "symbol": symbol,
-        "rsi": safe_float(latest_data["RSI"], "RSI"),
-        "macd": safe_float(latest_data["MACD"], "MACD"),
-        "sma_50": safe_float(latest_data["SMA_50"], "SMA_50"),
-        "sma_200": safe_float(latest_data["SMA_200"], "SMA_200"),
+        "RSI": safe_float(latest_data["RSI"], "RSI"),
+        "MACD": safe_float(latest_data["MACD"], "MACD"),
+        "SMA50": safe_float(latest_data["SMA50"], "SMA50"),
+        "SMA200": safe_float(latest_data["SMA200"], "SMA200") if not np.isnan(latest_data["SMA200"]) else safe_float(latest_data["SMA50"], "SMA50"),
     }
     print(f"✅ Indikatoren für {symbol}: {result}")
     return result
 
 # AI-Modell-Vorhersage
 def ai_predict(symbol, indicators):
-    df = pd.DataFrame([indicators])
+    df = pd.DataFrame([{
+        "RSI": indicators["RSI"],
+        "MACD": indicators["MACD"],
+        "SMA50": indicators["SMA50"],
+        "SMA200": indicators["SMA200"]
+    }])
     prediction = model.predict(df)
     return int(prediction[0])
 
@@ -122,9 +103,9 @@ def select_best_stock():
             continue
         ai_signal = ai_predict(stock, indicators)
         score = 0
-        if indicators["rsi"] is not None and indicators["rsi"] < 30:
+        if indicators["RSI"] is not None and indicators["RSI"] < 30:
             score += 2
-        if indicators["macd"] is not None and indicators["macd"] > 0:
+        if indicators["MACD"] is not None and indicators["MACD"] > 0:
             score += 1
         if ai_signal == 1:
             score += 3
@@ -141,10 +122,10 @@ def get_best_stock():
             return {"error": "Keine Empfehlung verfügbar"}
         recommendation = clean_json_data({
             "symbol": best_stock["symbol"],
-            "rsi": best_stock["rsi"],
-            "macd": best_stock["macd"],
-            "sma_50": best_stock["sma_50"],
-            "sma_200": best_stock["sma_200"],
+            "RSI": best_stock["RSI"],
+            "MACD": best_stock["MACD"],
+            "SMA50": best_stock["SMA50"],
+            "SMA200": best_stock["SMA200"],
             "ai_signal": ai_predict(best_stock["symbol"], best_stock)
         })
         return recommendation
