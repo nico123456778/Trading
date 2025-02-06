@@ -91,17 +91,17 @@ def calculate_indicators(symbol):
         print(f"⚠ Keine Daten für {symbol} gefunden!")
         return None
 
-    df["SMA_50"] = df["Close"].rolling(window=50).mean()
-    df["SMA_200"] = df["Close"].rolling(window=200).mean()
+    df["SMA50"] = df["Close"].rolling(window=50).mean()
+    df["SMA200"] = df["Close"].rolling(window=200).mean()
     df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean() / df["Close"].pct_change().rolling(14).std()))
     df["MACD"] = df["Close"].ewm(span=12, adjust=False).mean() - df["Close"].ewm(span=26, adjust=False).mean()
     latest_data = df.iloc[-1]
     result = {
         "symbol": symbol,
-        "rsi": safe_float(latest_data["RSI"], "RSI"),
-        "macd": safe_float(latest_data["MACD"], "MACD"),
-        "sma_50": safe_float(latest_data["SMA_50"], "SMA_50"),
-        "sma_200": safe_float(latest_data["SMA_200"], "SMA_200"),
+        "RSI": safe_float(latest_data["RSI"], "RSI"),
+        "MACD": safe_float(latest_data["MACD"], "MACD"),
+        "SMA50": safe_float(latest_data["SMA50"], "SMA50"),
+        "SMA200": safe_float(latest_data["SMA200"], "SMA200"),
     }
     print(f"✅ Indikatoren für {symbol}: {result}")
     return result
@@ -122,9 +122,9 @@ def select_best_stock():
             continue
         ai_signal = ai_predict(stock, indicators)
         score = 0
-        if indicators["rsi"] is not None and indicators["rsi"] < 30:
+        if indicators["RSI"] is not None and indicators["RSI"] < 30:
             score += 2
-        if indicators["macd"] is not None and indicators["macd"] > 0:
+        if indicators["MACD"] is not None and indicators["MACD"] > 0:
             score += 1
         if ai_signal == 1:
             score += 3
@@ -141,10 +141,10 @@ def get_best_stock():
             return {"error": "Keine Empfehlung verfügbar"}
         recommendation = clean_json_data({
             "symbol": best_stock["symbol"],
-            "rsi": best_stock["rsi"],
-            "macd": best_stock["macd"],
-            "sma_50": best_stock["sma_50"],
-            "sma_200": best_stock["sma_200"],
+            "RSI": best_stock["RSI"],
+            "MACD": best_stock["MACD"],
+            "SMA50": best_stock["SMA50"],
+            "SMA200": best_stock["SMA200"],
             "ai_signal": ai_predict(best_stock["symbol"], best_stock)
         })
         return recommendation
