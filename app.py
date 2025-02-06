@@ -97,7 +97,6 @@ def calculate_indicators(symbol):
     df["MACD"] = df["Close"].ewm(span=12, adjust=False).mean() - df["Close"].ewm(span=26, adjust=False).mean()
     latest_data = df.iloc[-1]
     result = {
-        "symbol": symbol,
         "RSI": safe_float(latest_data["RSI"], "RSI"),
         "MACD": safe_float(latest_data["MACD"], "MACD"),
         "SMA50": safe_float(latest_data["SMA50"], "SMA50"),
@@ -107,7 +106,7 @@ def calculate_indicators(symbol):
     return result
 
 # AI-Modell-Vorhersage
-def ai_predict(symbol, indicators):
+def ai_predict(indicators):
     df = pd.DataFrame([indicators])
     prediction = model.predict(df)
     return int(prediction[0])
@@ -120,14 +119,10 @@ def select_best_stock():
         indicators = calculate_indicators(stock)
         if not indicators:
             continue
-        ai_signal = ai_predict(stock, indicators)
-        score = 0
-        if indicators["RSI"] is not None and indicators["RSI"] < 30:
-            score += 2
-        if indicators["MACD"] is not None and indicators["MACD"] > 0:
-            score += 1
-        if ai_signal == 1:
-            score += 3
+        ai_signal = ai_predict(indicators)
+        score = sum([2 if indicators["RSI"] < 30 else 0,
+                     1 if indicators["MACD"] > 0 else 0,
+                     3 if ai_signal == 1 else 0])
         if score > best_score:
             best_score = score
             best_stock = indicators
@@ -135,22 +130,10 @@ def select_best_stock():
 
 @app.get("/recommendation")
 def get_best_stock():
-    try:
-        best_stock = select_best_stock()
-        if not best_stock:
-            return {"error": "Keine Empfehlung verfügbar"}
-        recommendation = clean_json_data({
-            "symbol": best_stock["symbol"],
-            "RSI": best_stock["RSI"],
-            "MACD": best_stock["MACD"],
-            "SMA50": best_stock["SMA50"],
-            "SMA200": best_stock["SMA200"],
-            "ai_signal": ai_predict(best_stock["symbol"], best_stock)
-        })
-        return recommendation
-    except Exception as e:
-        print(f"🔥 FEHLER in /recommendation: {str(e)}")
-        return {"error": "Internal Server Error", "details": str(e)}
+    best_stock = select_best_stock()
+    if not best_stock:
+        return {"error": "Keine Empfehlung verfügbar"}
+    return clean_json_data(best_stock)
 
 @app.get("/")
 def read_root():
