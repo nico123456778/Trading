@@ -68,21 +68,6 @@ def clean_json_data(data):
         return round(data, 6)
     return data
 
-# Google-Suche für relevante Finanznachrichten
-@app.get("/search")
-def search(q: str):
-    if not GOOGLE_API_KEY or not GOOGLE_CSE_ID:
-        return {"error": "Google API Key oder CSE ID fehlt!"}
-    
-    url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        "key": GOOGLE_API_KEY,
-        "cx": GOOGLE_CSE_ID,
-        "q": q
-    }
-    response = requests.get(url, params=params)
-    return response.json()
-
 # Funktion zur Berechnung technischer Indikatoren
 def calculate_indicators(symbol):
     print(f"🔍 Berechne Indikatoren für: {symbol}")
@@ -91,36 +76,44 @@ def calculate_indicators(symbol):
         print(f"⚠ Keine Daten für {symbol} gefunden!")
         return None
 
-    df["SMA50"] = df["Close"].rolling(window=50).mean()
-    df["SMA200"] = df["Close"].rolling(window=200).mean()
+    df["SMA_50"] = df["Close"].rolling(window=50).mean()
+    df["SMA_200"] = df["Close"].rolling(window=200).mean()
+    df["SMA_200"].fillna(df["SMA_50"], inplace=True)
+    df["SMA_200"].fillna(df["Close"].rolling(200).mean(), inplace=True)
+    df["SMA_200"].fillna(df["Close"].mean(), inplace=True)
     
-    # Debugging-Log für SMA200 prüfen
-    print(f"📊 {symbol}: Datenpunkte verfügbar = {len(df)} | Letzter SMA200-Wert: {df['SMA200'].iloc[-1]}")
-    
-    # Falls SMA200 NaN ist, nutze SMA50 oder den Durchschnitt der letzten 200 Tage
-    df["SMA200"].fillna(df["SMA50"], inplace=True)  # Falls möglich, SMA50 nutzen
-    df["SMA200"].fillna(df["Close"].rolling(200).mean(), inplace=True)  # Falls noch NaN, Durchschnitt der letzten 200 Tage
-    df["SMA200"].fillna(df["Close"].mean(), inplace=True)  # Falls alles fehlschlägt, nimm den Gesamt-Durchschnitt
-
     df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean() / df["Close"].pct_change().rolling(14).std()))
     df["MACD"] = df["Close"].ewm(span=12, adjust=False).mean() - df["Close"].ewm(span=26, adjust=False).mean()
     latest_data = df.iloc[-1]
     result = {
-        "RSI": safe_float(latest_data["RSI"], "RSI"),
-        "MACD": safe_float(latest_data["MACD"], "MACD"),
-        "SMA50": safe_float(latest_data["SMA50"], "SMA50"),
-        "SMA200": safe_float(latest_data["SMA200"], "SMA200"),
+        "rsi": safe_float(latest_data["RSI"], "RSI"),
+        "macd": safe_float(latest_data["MACD"], "MACD"),
+        "sma_50": safe_float(latest_data["SMA_50"], "SMA_50"),
+        "sma_200": safe_float(latest_data["SMA_200"], "SMA_200"),
     }
     print(f"✅ Indikatoren für {symbol}: {result}")
     return result
 
+# AI-Modell-Vorhersage
+def ai_predict(indicators):
+    df = pd.DataFrame([indicators])
+    prediction = model.predict(df)
+    return int(prediction[0])
+
 @app.get("/recommendation")
 def get_best_stock():
-    best_stock = select_best_stock()
-    if not best_stock:
-        return {"error": "Keine Empfehlung verfügbar"}
-    return clean_json_data(best_stock)
-
-@app.get("/")
-def read_root():
-    return FileResponse("static/index.html")
+    try:
+        best_stock = select_best_stock()
+        if not best_stock:
+            return {"message": "❌ Keine passende Aktie gefunden."}
+        recommendation = clean_json_data({
+            "rsi": best_stock["rsi"],
+            "macd": best_stock["macd"],
+            "sma_50": best_stock["sma_50"],
+            "sma_200": best_stock["sma_200"],
+            "ai_signal": ai_predict(best_stock)
+        })
+        return recommendation
+    except Exception as e:
+        print(f"🔥 FEHLER in /recommendation: {str(e)}")
+        return {"error": "Internal Server Error", "details": str(e)}
