@@ -139,6 +139,14 @@ def get_best_stock():
         best_stock = select_best_stock()
         if not best_stock:
             return {"error": "Keine Empfehlung verfügbar"}
+            # Feature-Namen anpassen, damit sie mit dem Modell übereinstimmen
+features = {
+    "MACD": indicators["macd"],
+    "RSI": indicators["rsi"],
+    "SMA200": indicators["sma_200"],
+    "SMA50": indicators["sma_50"],
+}
+
         recommendation = clean_json_data({
             "symbol": best_stock["symbol"],
             "rsi": best_stock["rsi"],
