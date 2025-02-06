@@ -25,13 +25,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
-# Datenbank einrichten (SQLite für einfaches Deployment)
-DATABASE_URL = "sqlite:///./stocks.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+# 📥 Automatische Aktienlisten (S&P 500, DAX 40, Internationale Aktien)
+url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+table = pd.read_html(requests.get(url).text)[0]
+sp500_tickers = table["Symbol"].tolist()
 
-# Aktienliste mit S&P 500 und internationalen Aktien
+dax40_tickers = ["ADS.DE", "ALV.DE", "BAS.DE", "BAYN.DE", "BEI.DE", "BMW.DE", "CON.DE", "DAI.DE", "DBK.DE", "DPW.DE",
+                 "DTE.DE", "EOAN.DE", "FME.DE", "FRE.DE", "HEI.DE", "HEN3.DE", "IFX.DE", "LHA.DE", "LIN.DE", "MRK.DE",
+                 "MUV2.DE", "RWE.DE", "SAP.DE", "SIE.DE", "TKA.DE", "VNA.DE", "VOW3.DE"]
+
+intl_tickers = ["BABA", "TSM", "NIO", "ASML", "SHOP", "TCEHY", "RACE", "JD", "SE", "ZM"]
+
 STOCK_LIST = sp500_tickers + dax40_tickers + intl_tickers
 
 # AI-Modell laden
@@ -67,6 +71,7 @@ def calculate_indicators(symbol):
     df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean() / df["Close"].pct_change().rolling(14).std()))
     df["MACD"] = df["Close"].ewm(span=12, adjust=False).mean() - df["Close"].ewm(span=26, adjust=False).mean()
     df["SMA200"].fillna(method="ffill", inplace=True)
+    
     latest_data = df.iloc[-1]
     
     result = {
@@ -84,7 +89,8 @@ def calculate_indicators(symbol):
     print(f"✅ Indikatoren für {symbol}: {result}")
     return result
 
-# Empfehlungssystem mit Sentiment und Fundamentaldaten@app.get("/recommendation")
+# Empfehlungssystem mit Sentiment und Fundamentaldaten
+@app.get("/recommendation")
 def get_best_stock():
     try:
         best_stock = None
@@ -93,7 +99,7 @@ def get_best_stock():
             indicators = calculate_indicators(stock)
             if not indicators:
                 continue
-            ai_signal = ai_predict(stock, indicators)
+            ai_signal = model.predict(pd.DataFrame([indicators]))[0]
             score = 0
             if indicators["RSI"] is not None and indicators["RSI"] < 30:
                 score += 2
