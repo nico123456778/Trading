@@ -141,12 +141,13 @@ def get_best_stock():
             return {"error": "Keine Empfehlung verfügbar"}
 
         # Feature-Namen anpassen, damit sie mit dem Modell übereinstimmen
-        features = {
-            "MACD": best_stock["MACD"],  # Großbuchstaben verwenden!
-            "RSI": best_stock["RSI"],
-            "SMA200": best_stock["SMA200"],
-            "SMA50": best_stock["SMA50"]
-        }
+     features = {
+    "MACD": float(best_stock["MACD"]),  # Großbuchstaben verwenden
+    "RSI": float(best_stock["RSI"]),
+    "SMA200": float(best_stock["SMA200"]) if not pd.isna(best_stock["SMA200"]) else 0.0,  # Falls NaN, setze 0
+    "SMA50": float(best_stock["SMA50"])
+}
+
 
         recommendation = clean_json_data({
             "symbol": best_stock["symbol"],
