@@ -136,6 +136,7 @@ def select_best_stock():
 @app.get("/recommendation")
 def get_best_stock():
     try:
+        print(f"DEBUG: best_stock = {best_stock}")
         best_stock = select_best_stock()
         if not best_stock:
             return {"error": "Keine Empfehlung verfügbar"}
@@ -156,6 +157,7 @@ def get_best_stock():
             "SMA50": features["SMA50"],
             "ai_signal": ai_predict(best_stock["symbol"], features)
         })
+print(f"DEBUG: Features an Modell: {features}")
 
         return recommendation
 
