@@ -141,7 +141,7 @@ def get_best_stock():
             return {"error": "Keine Empfehlung verfügbar"}
 
         # Feature-Namen anpassen, damit sie mit dem Modell übereinstimmen
-      features = {
+ features = {
     "MACD": best_stock["MACD"],  # Großbuchstaben verwenden!
     "RSI": best_stock["RSI"],
     "SMA200": best_stock["SMA200"],
