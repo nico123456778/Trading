@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading-App - Kaufempfehlung</title>
+    <title>Trading-Empfehlung</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
             text-align: center;
-            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
         }
         .container {
             width: 80%;
@@ -24,9 +26,22 @@
             font-weight: bold;
             color: #007bff;
         }
+        .news {
+            text-align: left;
+            margin-top: 20px;
+        }
+        .sentiment-positive {
+            color: green;
+        }
+        .sentiment-negative {
+            color: red;
+        }
+        .sentiment-neutral {
+            color: orange;
+        }
         table {
             width: 100%;
-            margin: 20px auto;
+            margin-top: 20px;
             border-collapse: collapse;
         }
         th, td {
@@ -45,80 +60,79 @@
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h1>🚀 Top Aktienempfehlung</h1>
-        <h2 class="highlight" id="stockSymbol">Lädt...</h2>
-        <p>Analyse basierend auf technischen Indikatoren & News.</p>
-
-        <h3>📊 Technische Indikatoren</h3>
+        <h1>🚀 Top Trading-Empfehlung</h1>
+        <p class="highlight" id="bestAsset">Lade Daten...</p>
+        
+        <canvas id="chart"></canvas>
+        
+        <h2>Indikatoren</h2>
         <table>
-            <tr><th>RSI</th><td id="rsi">-</td></tr>
-            <tr><th>MACD</th><td id="macd">-</td></tr>
-            <tr><th>SMA 50</th><td id="sma50">-</td></tr>
-            <tr><th>SMA 200</th><td id="sma200">-</td></tr>
+            <tr><th>Indikator</th><th>Wert</th></tr>
+            <tr><td>RSI</td><td id="rsi">-</td></tr>
+            <tr><td>MACD</td><td id="macd">-</td></tr>
+            <tr><td>SMA 50</td><td id="sma50">-</td></tr>
+            <tr><td>SMA 200</td><td id="sma200">-</td></tr>
+            <tr><td>ATR</td><td id="atr">-</td></tr>
+            <tr><td>Bollinger Bands</td><td id="bollinger">-</td></tr>
+            <tr><td>Relative Stärke vs. S&P 500</td><td id="relativeStrength">-</td></tr>
+            <tr><td>Sentiment</td><td id="sentiment">-</td></tr>
         </table>
-
-        <section id="chart">
-            <h2>Kursverlauf</h2>
-            <label for="timeframe-select">Zeitraum:</label>
-            <select id="timeframe-select">
-                <option value="1D">1 Tag</option>
-                <option value="1W">1 Woche</option>
-                <option value="1M">1 Monat</option>
-                <option value="6M">6 Monate</option>
-                <option value="1Y">1 Jahr</option>
-            </select>
-            <canvas id="stock-chart"></canvas>
-        </section>
-
-        <h3>📰 Wichtige Nachrichten</h3>
-        <ul id="newsList">
-            <li>Lädt...</li>
-        </ul>
+        
+        <h2>📅 Zeitraum wählen</h2>
+        <select id="timeframe">
+            <option value="1d">1 Tag</option>
+            <option value="1w">1 Woche</option>
+            <option value="1m">1 Monat</option>
+            <option value="3m">3 Monate</option>
+            <option value="1y">1 Jahr</option>
+        </select>
+        
+        <h2>📰 Aktuelle Finanznachrichten</h2>
+        <div class="news" id="newsContainer">Lade News...</div>
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            loadStockData();
-        });
-
-        async function loadStockData() {
+        async function fetchData() {
             try {
-                const response = await fetch("/recommendation");
-                const data = await response.json();
-
-                if (data.error) {
-                    document.getElementById("stockSymbol").innerText = "⚠ Keine Empfehlung verfügbar";
-                    return;
-                }
-
-                document.getElementById("stockSymbol").innerText = data.symbol || "Unbekannt";
-                document.getElementById("rsi").innerText = data.rsi !== null ? data.rsi.toFixed(2) : "N/A";
-                document.getElementById("macd").innerText = data.macd !== null ? data.macd.toFixed(2) : "N/A";
-                document.getElementById("sma50").innerText = data.sma_50 !== null ? data.sma_50.toFixed(2) : "N/A";
-                document.getElementById("sma200").innerText = data.sma_200 !== null ? data.sma_200.toFixed(2) : "N/A";
-
-                // News laden
-                const newsList = document.getElementById("newsList");
-                newsList.innerHTML = "";
-                data.news.forEach(news => {
-                    const li = document.createElement("li");
-                    li.innerText = `${news.title} (Rating: ${news.rating})`;
-                    newsList.appendChild(li);
-                });
-
+                let response = await fetch("/");
+                let data = await response.json();
+                
+                document.getElementById("bestAsset").textContent = data.best_asset;
+                document.getElementById("rsi").textContent = data.rsi;
+                document.getElementById("macd").textContent = data.macd;
+                document.getElementById("sma50").textContent = data.sma50;
+                document.getElementById("sma200").textContent = data.sma200;
+                document.getElementById("atr").textContent = data.atr;
+                document.getElementById("bollinger").textContent = `${data.bb_upper} / ${data.bb_lower}`;
+                document.getElementById("relativeStrength").textContent = data.relative_strength;
+                document.getElementById("sentiment").textContent = data.sentiment;
             } catch (error) {
-                console.error("Fehler beim Laden der Daten:", error);
-                document.getElementById("stockSymbol").innerText = "⚠ Fehler beim Laden der Daten";
+                console.error("Fehler beim Abrufen der Daten:", error);
             }
         }
+        
+        async function fetchNews() {
+            try {
+                let response = await fetch("/news");
+                let newsData = await response.json();
+                let newsContainer = document.getElementById("newsContainer");
+                newsContainer.innerHTML = "";
+                
+                newsData.forEach(article => {
+                    let div = document.createElement("div");
+                    div.innerHTML = `<strong>${article.title}</strong> - ${article.sentiment}`;
+                    div.classList.add(article.sentiment > 0 ? "sentiment-positive" : article.sentiment < 0 ? "sentiment-negative" : "sentiment-neutral");
+                    newsContainer.appendChild(div);
+                });
+            } catch (error) {
+                console.error("Fehler beim Abrufen der News:", error);
+            }
+        }
+        
+        document.getElementById("timeframe").addEventListener("change", fetchData);
+        fetchData();
+        fetchNews();
     </script>
-
-<script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.0.0"></script>
-
 </body>
 </html>
