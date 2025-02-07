@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-joblib
-scikit-learn
-pandas
-yfinance
-numpy
-matplotlib
-ta
