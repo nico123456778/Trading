@@ -5,118 +5,127 @@ import yfinance as yf
 import requests
 import numpy as np
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
-import math
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 import joblib
 from textblob import TextBlob
+import ta  # Technische Analyse Bibliothek
 
 # FastAPI App erstellen
 app = FastAPI()
 
-# Statische Dateien bereitstellen
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# CORS aktivieren, falls API von einer externen Website aufgerufen wird
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Google API Umgebungsvariablen aus Render laden
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
-# 📥 Automatische Aktienlisten (S&P 500, DAX 40, Internationale Aktien)
-url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-table = pd.read_html(requests.get(url).text)[0]
-sp500_tickers = table["Symbol"].tolist()
+# 📥 Aktien- und Krypto-Listen
+STOCK_LIST = [
+    "AAPL", "MSFT", "TSLA", "NVDA", "AMZN", "GOOGL", "META", "NFLX",
+    "MMM", "ABT", "ABBV", "ABMD", "ACN", "ATVI", "ADBE", "AMD", "AAP", "AES", "AFL", "A", "APD", "AKAM", "ALK", "ALB", "ARE", "ALGN", "ALLE", "LNT", "ALL", "GOOGL", "GOOG", "MO", "AMZN", "AMCR", "AEE", "AAL", "AEP", "AXP", "AIG", "AMT", "AWK", "AMP", "ABC", "AME", "AMGN", "APH", "ADI", "ANSS", "AON", "APA", "AAPL", "AMAT", "APTV", "ANET", "AJG", "AIZ", "T", "ATO", "ADSK", "AZO", "AVB", "AVY", "BKR", "BALL", "BAC", "BBWI", "BAX", "BDX", "BRK.B", "BBY", "BIO", "TECH", "BIIB", "BLK", "BK", "BA", "BKNG", "BWA", "BXP", "BSX", "BMY", "AVGO", "BR", "BRO", "BF.B", "CHRW", "CDNS", "CZR", "CPB", "COF", "CAH", "KMX", "CCL", "CARR", "CTLT", "CAT", "CBOE", "CBRE", "CDW", "CE", "CNC", "CNP", "CDAY", "CERN", "CF", "CRL", "SCHW", "CHTR", "CVX", "CMG", "CB", "CHD", "CI", "CINF", "CTAS", "CSCO", "C"
+]
+CRYPTO_LIST = [
+    "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD", "DOT-USD", "MATIC-USD", "XLM-USD", "ADA-USD", "DOGE-USD", "LTC-USD", "BCH-USD", "UNI-USD", "LINK-USD", "XMR-USD", "ETC-USD", "VET-USD", "FIL-USD", "TRX-USD", "EOS-USD", "XTZ-USD", "ATOM-USD", "AAVE-USD", "MKR-USD", "ALGO-USD", "DASH-USD", "ZEC-USD"
+]
+ASSET_LIST = STOCK_LIST + CRYPTO_LIST  # Enthält alle trainierten Aktien & Kryptos
 
-dax40_tickers = ["ADS.DE", "ALV.DE", "BAS.DE", "BAYN.DE", "BEI.DE", "BMW.DE", "CON.DE", "DAI.DE", "DBK.DE", "DPW.DE",
-                 "DTE.DE", "EOAN.DE", "FME.DE", "FRE.DE", "HEI.DE", "HEN3.DE", "IFX.DE", "LHA.DE", "LIN.DE", "MRK.DE",
-                 "MUV2.DE", "RWE.DE", "SAP.DE", "SIE.DE", "TKA.DE", "VNA.DE", "VOW3.DE"]
-
-intl_tickers = ["BABA", "TSM", "NIO", "ASML", "SHOP", "TCEHY", "RACE", "JD", "SE", "ZM"]
-
-STOCK_LIST = sp500_tickers + dax40_tickers + intl_tickers
-
-# AI-Modell laden
-model = joblib.load("models/stock_model.pkl")
-
-# Funktion zur Sentiment-Analyse von Finanznachrichten
-def get_news_sentiment(query):
-    url = f"https://newsapi.org/v2/everything?q={query}&apiKey=DEIN_API_KEY"
-    response = requests.get(url).json()
-    news = response.get("articles", [])[:5]
-    
-    sentiment_scores = []
-    for article in news:
-        text = article.get("title", "") + " " + article.get("description", "")
-        sentiment = TextBlob(text).sentiment.polarity
-        sentiment_scores.append(sentiment)
-    
-    return sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
-
-# Funktion zur Berechnung technischer Indikatoren und Fundamentaldaten
-def calculate_indicators(symbol):
-    print(f"🔍 Berechne Indikatoren für: {symbol}")
-    df = yf.download(symbol, period="1y", interval="1d")
-    stock = yf.Ticker(symbol)
-    info = stock.info
-    
-    if df.empty:
-        print(f"⚠ Keine Daten für {symbol} gefunden!")
-        return None
-
-    df["SMA50"] = df["Close"].rolling(window=50).mean()
-    df["SMA200"] = df["Close"].rolling(window=200).mean()
-    df["RSI"] = 100 - (100 / (1 + df["Close"].pct_change().rolling(14).mean() / df["Close"].pct_change().rolling(14).std()))
-    df["MACD"] = df["Close"].ewm(span=12, adjust=False).mean() - df["Close"].ewm(span=26, adjust=False).mean()
-    df["SMA200"].fillna(method="ffill", inplace=True)
-    
-    latest_data = df.iloc[-1]
-    
-    result = {
-        "symbol": symbol,
-        "RSI": latest_data["RSI"],
-        "MACD": latest_data["MACD"],
-        "SMA50": latest_data["SMA50"],
-        "SMA200": latest_data["SMA200"],
-        "Revenue": info.get("totalRevenue", None),
-        "NetIncome": info.get("netIncome", None),
-        "PE_Ratio": info.get("trailingPE", None),
-        "DividendYield": info.get("dividendYield", None),
-        "Sentiment": get_news_sentiment(symbol)
-    }
-    print(f"✅ Indikatoren für {symbol}: {result}")
-    return result
-
-# Empfehlungssystem mit Sentiment und Fundamentaldaten
-@app.get("/recommendation")
-def get_best_stock():
+# Makroökonomische Faktoren abrufen
+def get_interest_rate():
     try:
-        best_stock = None
-        best_score = float('-inf')
-        for stock in STOCK_LIST:
-            indicators = calculate_indicators(stock)
-            if not indicators:
-                continue
-            ai_signal = model.predict(pd.DataFrame([indicators]))[0]
-            score = 0
-            if indicators["RSI"] is not None and indicators["RSI"] < 30:
-                score += 2
-            if indicators["MACD"] is not None and indicators["MACD"] > 0:
-                score += 1
-            if indicators["Sentiment"] > 0:
-                score += 2
-            if ai_signal == 1:
-                score += 3
-            if score > best_score:
-                best_score = score
-                best_stock = indicators
-        return best_stock if best_stock else {"error": "Keine Empfehlung verfügbar"}
-    except Exception as e:
-        print(f"🔥 FEHLER in /recommendation: {str(e)}")
-        return {"error": "Internal Server Error", "details": str(e)}
+        fed_funds = yf.Ticker("^IRX")
+        return fed_funds.history(period="1mo")["Close"].iloc[-1]
+    except Exception:
+        return 0.0  # Fallback-Wert, falls API nicht erreichbar ist
 
+def get_inflation():
+    try:
+        cpi = yf.Ticker("^CPI")
+        return cpi.history(period="1mo")["Close"].iloc[-1]
+    except Exception:
+        return 0.0  # Fallback-Wert
+
+inflation = get_inflation()
+interest_rate = get_interest_rate()
+
+# KI-Modell laden (Pfad angepasst für Render-Deployment)
+model_path = os.path.join(os.getcwd(), "Trading-main", "Trading_KI", "models", "stock_model.pkl")
+model = joblib.load(model_path)
+
+# 📊 Funktion zur Sentiment-Analyse von Finanznachrichten
+def get_news_sentiment(query):
+    try:
+        url = f"https://www.googleapis.com/customsearch/v1?q={query}&cx={GOOGLE_CSE_ID}&key={GOOGLE_API_KEY}"
+        response = requests.get(url).json()
+        news = response.get("items", [])[:5]
+        
+        sentiment_scores = []
+        for article in news:
+            snippet = article.get("snippet", "")
+            analysis = TextBlob(snippet)
+            sentiment_scores.append(analysis.sentiment.polarity)
+        
+        if sentiment_scores:
+            return sum(sentiment_scores) / len(sentiment_scores)
+    except Exception:
+        pass
+    return 0.0  # Fallback-Sentiment
+
+# 📈 Funktion zur Auswahl der besten Aktie/Krypto
+def select_best_asset():
+    try:
+        sp500 = yf.download("^GSPC", period="5y", interval="1d")["Close"].squeeze()
+    except Exception:
+        sp500 = pd.Series([1] * 365 * 5)  # Fallback-Werte für S&P 500
+    
+    scores = []
+    for ticker in ASSET_LIST:
+        try:
+            data = yf.download(ticker, period="7d", interval="1d")
+            if data.empty:
+                continue
+            
+            latest_data = data.iloc[-1]
+            df = pd.DataFrame([{ 
+                "close": latest_data.get("Close", np.nan),
+                "volume": latest_data.get("Volume", np.nan),
+                "RSI": ta.momentum.RSIIndicator(data["Close"]).rsi().iloc[-1] if "Close" in data else np.nan,
+                "MACD": ta.trend.MACD(data["Close"]).macd().iloc[-1] if "Close" in data else np.nan,
+                "SMA50": ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().iloc[-1] if "Close" in data else np.nan,
+                "SMA200": ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().iloc[-1] if "Close" in data else np.nan,
+                "ATR": ta.volatility.AverageTrueRange(data["High"], data["Low"], data["Close"]).average_true_range().iloc[-1] if "High" in data else np.nan,
+                "BB_Upper": ta.volatility.BollingerBands(data["Close"]).bollinger_hband().iloc[-1] if "Close" in data else np.nan,
+                "BB_Lower": ta.volatility.BollingerBands(data["Close"]).bollinger_lband().iloc[-1] if "Close" in data else np.nan,
+                "Volume_Trend": latest_data["Volume"] / data["Volume"].rolling(10).mean().iloc[-1] if "Volume" in data else np.nan,
+                "Relative_Strength": latest_data["Close"] / sp500.ffill().reindex(data.index, method="nearest").iloc[-1] if "Close" in data else np.nan,
+                "Inflation": inflation,
+                "Interest_Rate": interest_rate
+            }])
+            
+            df.fillna(0, inplace=True)  # NaN-Werte vermeiden
+            prediction = model.predict(df)[0]
+            sentiment = get_news_sentiment(ticker)
+            final_score = prediction + sentiment
+            scores.append((ticker, final_score))
+        except Exception:
+            continue
+    
+    if scores:
+        return max(scores, key=lambda x: x[1], default=(None, 0.0))
+    return None, 0.0
+
+# 📢 API-Route zur Startseite
 @app.get("/")
-def read_root():
-    return FileResponse("static/index.html")
+def get_recommendation():
+    best_asset, score = select_best_asset()
+    return {"best_asset": best_asset, "score": score}
