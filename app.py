@@ -113,7 +113,8 @@ from fastapi.requests import Request
 @app.get("/")
 def serve_index(request: Request):
     if "text/html" in request.headers.get("accept", ""):
-        return FileResponse("index.html")
+      return FileResponse("static/index.html")
+
     else:
         best_asset, score = select_best_asset()
         return {"best_asset": best_asset, "score": score, "full_list": ASSET_LIST}
