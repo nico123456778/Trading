@@ -63,8 +63,13 @@ def select_best_asset():
     for ticker in ASSET_LIST:
         try:
             data = yf.download(ticker, period="7d", interval="1d")
+
+            print(f"📊 Lade Daten für {ticker} ...")  # Debugging-Log
             if data.empty:
+                print(f"⚠ Keine Daten für {ticker} gefunden!")
                 continue
+
+            print(data.tail())  # Zeigt die letzten Zeilen der Daten
 
             df = pd.DataFrame({
                 "close": data["Close"].iloc[-1],
@@ -73,17 +78,20 @@ def select_best_asset():
                 "SMA50": ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().iloc[-1],
                 "SMA200": ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().iloc[-1],
             }, index=[0])
-            
+
             prediction = model.predict(df)[0] if model else 0
             sentiment = get_news_sentiment(ticker)
             final_score = prediction + sentiment
             scores.append((ticker, final_score))
-        except Exception:
+
+        except Exception as e:
+            print(f"❌ Fehler bei {ticker}: {e}")
             continue
-    
+
     if scores:
         return max(scores, key=lambda x: x[1], default=(None, 0.0))
     return None, 0.0
+
 
 # API-Route für die empfohlene Aktie/Krypto
 @app.get("/")
