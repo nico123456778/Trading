@@ -90,3 +90,10 @@ def select_best_asset():
 def get_recommendation():
     best_asset, score = select_best_asset()
     return {"best_asset": best_asset, "score": score, "full_list": ASSET_LIST}
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/")
+def serve_index():
+    return FileResponse("index.html")
+
