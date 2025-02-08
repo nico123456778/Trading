@@ -77,7 +77,7 @@ def select_best_asset():
                 print(f"⚠ Keine Daten für {ticker} gefunden!")
                 continue
 
-        try:
+      try:
     print(data.tail())  # Zeigt die letzten Zeilen der Daten
 
     df = pd.DataFrame({
@@ -96,8 +96,6 @@ def select_best_asset():
 except Exception as e:
     print(f"❌ Fehler bei {ticker}: {e}")
     continue
-
-
 
 
     if scores:
