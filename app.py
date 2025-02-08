@@ -79,24 +79,24 @@ def select_best_asset():
 
             print(data.tail())  # Zeigt die letzten Zeilen der Daten
 
-df = pd.DataFrame({
-    "close": data["Close"].iloc[-1],
-    "RSI": ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1],
-    "MACD": ta.trend.MACD(data["Close"]).macd().dropna().values[-1],
-    "SMA50": ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1],
-    "SMA200": ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1],
-}, index=[0])
+try:
+    df = pd.DataFrame({
+        "close": data["Close"].iloc[-1],
+        "RSI": ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1],
+        "MACD": ta.trend.MACD(data["Close"]).macd().dropna().values[-1],
+        "SMA50": ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1],
+        "SMA200": ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1],
+    }, index=[0])
 
+    prediction = model.predict(df)[0] if model else 0
+    sentiment = get_news_sentiment(ticker)
+    final_score = prediction + sentiment
+    scores.append((ticker, final_score))
 
+except Exception as e:
+    print(f"❌ Fehler bei {ticker}: {e}")
+    continue
 
-            prediction = model.predict(df)[0] if model else 0
-            sentiment = get_news_sentiment(ticker)
-            final_score = prediction + sentiment
-            scores.append((ticker, final_score))
-
-        except Exception as e:
-            print(f"❌ Fehler bei {ticker}: {e}")
-            continue
 
     if scores:
         return max(scores, key=lambda x: x[1], default=(None, 0.0))
