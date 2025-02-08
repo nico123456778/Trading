@@ -79,13 +79,15 @@ def select_best_asset():
 
             print(data.tail())  # Zeigt die letzten Zeilen der Daten
 
-            df = pd.DataFrame({
-                "close": data["Close"].iloc[-1],
-                "RSI": ta.momentum.RSIIndicator(data["Close"]).rsi().iloc[-1],
-                "MACD": ta.trend.MACD(data["Close"]).macd().iloc[-1],
-                "SMA50": ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().iloc[-1],
-                "SMA200": ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().iloc[-1],
-            }, index=[0])
+df = pd.DataFrame({
+    "close": data["Close"].iloc[-1],
+    "RSI": ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1],
+    "MACD": ta.trend.MACD(data["Close"]).macd().dropna().values[-1],
+    "SMA50": ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1],
+    "SMA200": ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1],
+}, index=[0])
+
+
 
             prediction = model.predict(df)[0] if model else 0
             sentiment = get_news_sentiment(ticker)
