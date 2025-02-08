@@ -31,12 +31,20 @@ STOCK_LIST = [
 CRYPTO_LIST = ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD", "DOT-USD", "MATIC-USD", "XLM-USD", "ADA-USD", "DOGE-USD", "LTC-USD", "BCH-USD", "UNI-USD", "LINK-USD", "XMR-USD", "ETC-USD", "VET-USD", "FIL-USD", "TRX-USD", "EOS-USD", "XTZ-USD", "ATOM-USD", "AAVE-USD", "MKR-USD", "ALGO-USD", "DASH-USD", "ZEC-USD"]
 ASSET_LIST = STOCK_LIST + CRYPTO_LIST
 
-# KI-Modell laden
+# KI-Modell laden mit Debugging
 model_path = "stock_model.pkl"
-if os.path.exists(model_path):
-    model = joblib.load(model_path)
-else:
+
+if not os.path.exists(model_path):
+    print("🚨 Fehler: Die Datei 'stock_model.pkl' existiert nicht im Verzeichnis!")
     model = None
+else:
+    try:
+        model = joblib.load(model_path)
+        print("✅ Modell erfolgreich geladen!")
+    except Exception as e:
+        print(f"❌ Fehler beim Laden des Modells: {e}")
+        model = None
+
 
 # Funktion zur Sentiment-Analyse von Finanznachrichten
 def get_news_sentiment(query):
@@ -94,16 +102,19 @@ def select_best_asset():
 
 
 # API-Route für die empfohlene Aktie/Krypto
-@app.get("/")
-def get_recommendation():
-    best_asset, score = select_best_asset()
-    return {"best_asset": best_asset, "score": score, "full_list": ASSET_LIST}
 from fastapi.responses import FileResponse
 import os
 
+from fastapi.responses import FileResponse
+from fastapi.requests import Request
+
 @app.get("/")
-def serve_index():
-    return FileResponse("index.html")
+def serve_index(request: Request):
+    if "text/html" in request.headers.get("accept", ""):
+        return FileResponse("index.html")
+    else:
+        best_asset, score = select_best_asset()
+        return {"best_asset": best_asset, "score": score, "full_list": ASSET_LIST}
 
 @app.get("/debug_model")
 def debug_model():
