@@ -97,3 +97,14 @@ import os
 def serve_index():
     return FileResponse("index.html")
 
+@app.get("/debug_model")
+def debug_model():
+    if model is None:
+        return {"error": "Modell wurde nicht geladen!"}
+    
+    try:
+        test_data = pd.DataFrame([[150, 55, 0.5, 200, 210]], columns=["close", "RSI", "MACD", "SMA50", "SMA200"])
+        prediction = int(model.predict(test_data)[0])
+        return {"test_prediction": prediction}
+    except Exception as e:
+        return {"error": str(e)}
