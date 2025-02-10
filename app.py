@@ -256,15 +256,19 @@ def debug_model():
         return {"error": "Modell wurde nicht geladen!"}
     
     try:
-        test_data = pd.DataFrame([[150, 55, 0.5, 200, 210]], columns=["close", "RSI", "MACD", "SMA50", "SMA200"])
+        test_data = pd.DataFrame([[150, 55, 0.5, 200, 210]], columns=["Close", "RSI", "MACD", "SMA50", "SMA200"])
         prediction = int(model.predict(test_data)[0])
 
         for ticker in stock_list:
-    fetch_data_with_cache(ticker)
+            fetch_data_with_cache(ticker)
 
-multitasking.wait_for_tasks()  # 🔥 Warten, bis alle parallelen Tasks fertig sind
+        multitasking.wait_for_tasks()  # 🔥 Warten, bis alle parallelen Tasks fertig sind
 
         return {"test_prediction": prediction}
+
+    except Exception as e:
+        return {"error": str(e)}
+
     except Exception as e:
         return {"error": str(e)}
 
