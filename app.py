@@ -104,8 +104,8 @@ def select_best_asset():
 
             print(f"🤖 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")  # Debugging
 
-           scores.append((ticker, final_score))
-           global_scores.append((ticker, final_score))  # Hinzufügen zu global_scores
+            scores.append((ticker, final_score))
+            global_scores.append((ticker, final_score))  # Hinzufügen zu global_scores
 
 
         except Exception as e:
