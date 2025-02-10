@@ -178,37 +178,38 @@ def select_best_asset():
              })
 
 
-            print(f"📈 Berechnete Indikatoren für {ticker}: {df.to_dict(orient='records')}")  # Debugging
-            
-            # Vorhersage mit KI-Modell
+print(f"📊 Berechnete Indikatoren für {ticker}: {df.to_dict(orient='records')}")  # Debugging
+
+# Vorhersage mit KI-Modell
 prediction = 0
 if model and not df.isnull().values.any():
     try:
-        prediction = model.predict(df)[0]  # 🔥 Korrekte Einrückung
+        prediction = model.predict(df)[0]  # Korrekte Einrückung
         sentiment = get_news_sentiment(ticker)
         final_score = prediction + sentiment
 
-        print(f"📊 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")  # 🔥 Prüfe die Einrückung hier!
+        print(f"🤖 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")  # Debugging
 
         scores.append((ticker, final_score))
         global_scores.append((ticker, final_score))  # Hinzufügen zu global_scores
-        
-    except Exception as e:  # 🔥 Richtig eingerückt
-        print(f"❌ Fehler bei der Modellvorhersage: {e}")  # 🔥 Richtig eingerückt
 
-# 🔥 Debug-Informationen hier außerhalb des `except`-Blocks setzen
-print(f"🐞 DEBUG: scores = {scores}")  # Gibt alle berechneten Aktien aus
-print(f"🐞 DEBUG: best_asset = {best_asset}")  # Gibt die beste Aktie aus
+    except Exception as e:
+        print(f"❌ Fehler bei der Modellvorhersage: {e}")  # Richtig eingerückt
+
+# Debug-Informationen hier außerhalb des `except`-Blocks setzen
+print(f"🔍 DEBUG: scores = {scores}")  # Gibt alle berechneten Aktien aus
+print(f"🔍 DEBUG: best_asset = {best_asset}")  # Gibt die beste Aktie aus
 
 # Falls Scores existieren, beste Aktie/Krypto auswählen
 if scores:
     best_asset = max(scores, key=lambda x: x[1])
     print(f"🏆 Beste Aktie/Krypto: {best_asset[0]} mit Score {best_asset[1]}")  # Debugging
+    return best_asset
 
-         return best_asset
-    else:
-         print("⚠️ Keine geeignete Aktie/Krypto gefunden.")
+else:
+    print("⚠️ Keine geeignete Aktie/Krypto gefunden.")
     return None, 0.0
+
 
 
 
