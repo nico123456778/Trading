@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import pickle
 import yfinance as yf
 import requests
 import numpy as np
@@ -32,7 +33,7 @@ CRYPTO_LIST = ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD", "DOT-USD",
 ASSET_LIST = STOCK_LIST + CRYPTO_LIST
 
 # KI-Modell laden mit Debugging
-model_path = "stock_model.pkl"
+model_path = "Trading_KI/models/stock_model.pkl"
 
 if not os.path.exists(model_path):
     print("🚨 Fehler: Die Datei 'stock_model.pkl' existiert nicht im Verzeichnis!")
