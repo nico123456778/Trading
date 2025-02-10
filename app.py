@@ -112,20 +112,21 @@ def select_best_asset():
             print(f"📊 Lade Daten für {ticker} ...")  # Debugging-Log
             data = yf.download(ticker, period="7d", interval="1d")
 
-            if data.empty:
-                print(f"⚠️ Keine Daten für {ticker} gefunden!")
-                continue
+           if data is None or data.empty or "Close" not in data.columns:
+              print(f"⚠️ Keine gültigen Daten für {ticker} erhalten, überspringe...")
+              continue
+
 
             print(data.tail())  # Debugging-Log für letzte Zeilen der Daten
             
             # Berechnung der technischen Indikatoren
-            df = pd.DataFrame({
-               "Close": [float(data["Close"].iloc[-1].astype(float).item())],  # Sicherstellen, dass es ein Float ist
-               "RSI": float(ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]) if not ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().empty else None,
-               "MACD": float(ta.trend.MACD(data["Close"]).macd().dropna().values[-1]) if not ta.trend.MACD(data["Close"]).macd().dropna().empty else None,
-               "SMA50": float(ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1]) if not ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().empty else None,
-               "SMA200": float(ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1]) if not ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().empty else None,
-            })
+           df = pd.DataFrame({
+   "Close": float(data["Close"].iloc[-1].squeeze()),  # squeeze() stellt sicher, dass nur ein Wert bleibt
+   "RSI": float(ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]) if not ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().empty else None,
+   "MACD": float(ta.trend.MACD(data["Close"]).macd().dropna().values[-1]) if not ta.trend.MACD(data["Close"]).macd().dropna().empty else None,
+   "SMA50": float(ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1]) if not ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().empty else None,
+   "SMA200": float(ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1]) if not ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().empty else None,
+})
 
 
             print(f"📈 Berechnete Indikatoren für {ticker}: {df.to_dict(orient='records')}")  # Debugging
