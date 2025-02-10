@@ -66,40 +66,55 @@ def get_news_sentiment(query):
     return 0.0  # Fallback-Sentiment
 
 # Auswahl der besten Aktie/Krypto
+
 # Auswahl der besten Aktie/Krypto
 def select_best_asset():
     scores = []
+    
     for ticker in ASSET_LIST:
         try:
+            print(f"📊 Lade Daten für {ticker} ...")  # Debugging-Log
             data = yf.download(ticker, period="7d", interval="1d")
 
-            print(f"📊 Lade Daten für {ticker} ...")  # Debugging-Log
             if data.empty:
-                print(f"⚠ Keine Daten für {ticker} gefunden!")
+                print(f"⚠️ Keine Daten für {ticker} gefunden!")
                 continue
 
             print(data.tail())  # Debugging-Log für letzte Zeilen der Daten
-
+            
+            # Berechnung der technischen Indikatoren
             df = pd.DataFrame({
-           "Close": [data["Close"].iloc[-1]],  # In eine Liste setzen, um 1D-Array zu vermeiden
-           "RSI": [ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]],
-           "MACD": [ta.trend.MACD(data["Close"]).macd().dropna().values[-1]],
-           "SMA50": [ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1]],
-           "SMA200": [ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1]],
+                "Close": [data["Close"].iloc[-1]],  # In eine Liste setzen, um 1D-Array zu vermeiden
+                "RSI": [ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]],
+                "MACD": [ta.trend.MACD(data["Close"]).macd().dropna().values[-1]],
+                "SMA50": [ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1]],
+                "SMA200": [ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1]]
             })
 
+            print(f"📈 Berechnete Indikatoren für {ticker}: {df.to_dict(orient='records')}")  # Debugging
+            
+            # Vorhersage mit KI-Modell
             prediction = model.predict(df)[0] if model else 0
             sentiment = get_news_sentiment(ticker)
             final_score = prediction + sentiment
+
+            print(f"🤖 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")  # Debugging
+
             scores.append((ticker, final_score))
 
         except Exception as e:
-            print(f"❌ Fehler bei {ticker}: {e}")  # Fehler korrekt anzeigen
+            print(f"❌ Fehler bei {ticker}: {e}")
             continue
 
+    # Falls Scores existieren, beste Aktie/Krypto auswählen
     if scores:
-        return max(scores, key=lambda x: x[1], default=(None, 0.0))
-    return None, 0.0
+        best_asset = max(scores, key=lambda x: x[1])
+        print(f"🏆 Beste Aktie/Krypto: {best_asset[0]} mit Score {best_asset[1]}")  # Debugging
+        return best_asset
+    else:
+        print("⚠️ Keine geeignete Aktie/Krypto gefunden.")
+        return None, 0.0
+
 
 
 
