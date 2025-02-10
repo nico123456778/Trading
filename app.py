@@ -9,6 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import joblib
 from textblob import TextBlob
 import ta  # Technische Analyse Bibliothek
+import time
+import multitasking
+
 
 # FastAPI App erstellen
 app = FastAPI()
@@ -25,6 +28,46 @@ app.add_middleware(
 # Google API Umgebungsvariablen aus Render laden
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
+
+# 🔥 Datei zum Zwischenspeichern der Aktien-Daten
+CACHE_FILE = "cached_stock_data.csv"
+
+def load_cached_data():
+    """Lädt gespeicherte Daten, falls vorhanden"""
+    if os.path.exists(CACHE_FILE):
+        return pd.read_csv(CACHE_FILE)
+    return pd.DataFrame(columns=["Ticker", "Close"])
+
+def fetch_data(ticker):
+    """Lädt Aktien-Daten nur, wenn sie nicht bereits gespeichert wurden"""
+    existing_data = load_cached_data()
+
+    if ticker in existing_data["Ticker"].values:
+        print(f"⏩ {ticker} bereits gespeichert, überspringe Abruf.")
+        return
+
+    try:
+        print(f"📊 Lade Daten für {ticker} ...")
+        data = yf.download(ticker, period="7d", interval="1d")
+
+        if data.empty or "Close" not in data.columns:
+            print(f"⚠️ Keine Daten für {ticker}, überspringe...")
+            return
+        
+        # Speichere nur den letzten Schlusskurs
+        new_data = pd.DataFrame({
+            "Ticker": [ticker],
+            "Close": [data["Close"].iloc[-1]]
+        })
+
+        new_data.to_csv(CACHE_FILE, mode="a", header=not os.path.exists(CACHE_FILE), index=False)
+        print(f"✅ {ticker} gespeichert.")
+
+    except Exception as e:
+        print(f"❌ Fehler bei {ticker}: {e}")
+
+    time.sleep(2)  # 🔥 Wartezeit, um API-Sperren zu vermeiden
+
 
 # Liste der zu analysierenden Aktien und Kryptowährungen
 stock_list = [
