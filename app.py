@@ -107,7 +107,7 @@ def select_best_asset():
     scores = []  # Lokale Liste für Berechnungen
 
     
-    for ticker in ASSET_LIST:
+    for ticker in stock_list:
         try:
             print(f"📊 Lade Daten für {ticker} ...")  # Debugging-Log
             data = yf.download(ticker, period="7d", interval="1d")
@@ -167,14 +167,19 @@ import os
 from fastapi.responses import FileResponse
 from fastapi.requests import Request
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
+@app.head("/", include_in_schema=False)
 def serve_index(request: Request):
+
     if "text/html" in request.headers.get("accept", ""):
       return FileResponse("static/index.html")
 
-    else:
-        best_asset, score = select_best_asset()
-        return {"best_asset": best_asset, "score": score, "full_list": ASSET_LIST}
+   try:
+       best_asset, score = select_best_asset()
+   except Exception as e:
+       print(f"❌ Fehler in select_best_asset: {e}")
+       return {"error": "Interner Fehler bei der Auswahl des besten Assets"}
+
 
 @app.get("/api/empfohlene_aktie")
 def get_recommended_stock():
