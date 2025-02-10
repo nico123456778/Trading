@@ -12,33 +12,11 @@ import ta  # Technische Analyse Bibliothek
 import time
 import multitasking
 
+# 🔥 Maximal 5 gleichzeitige Downloads, um API-Rate-Limits zu vermeiden
+multitasking.set_max_threads(5)
 
-# FastAPI App erstellen
-app = FastAPI()
-
-# CORS aktivieren, falls API von einer externen Website aufgerufen wird
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Google API Umgebungsvariablen aus Render laden
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
-
-# 🔥 Datei zum Zwischenspeichern der Aktien-Daten
-CACHE_FILE = "cached_stock_data.csv"
-
-def load_cached_data():
-    """Lädt gespeicherte Daten, falls vorhanden"""
-    if os.path.exists(CACHE_FILE):
-        return pd.read_csv(CACHE_FILE)
-    return pd.DataFrame(columns=["Ticker", "Close"])
-
-def fetch_data(ticker):
+@multitasking.task
+def fetch_data_with_cache(ticker):
     """Lädt Aktien-Daten nur, wenn sie nicht bereits gespeichert wurden"""
     existing_data = load_cached_data()
 
@@ -67,6 +45,25 @@ def fetch_data(ticker):
         print(f"❌ Fehler bei {ticker}: {e}")
 
     time.sleep(2)  # 🔥 Wartezeit, um API-Sperren zu vermeiden
+
+
+
+# FastAPI App erstellen
+app = FastAPI()
+
+# CORS aktivieren, falls API von einer externen Website aufgerufen wird
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Google API Umgebungsvariablen aus Render laden
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
+
 
 
 # Liste der zu analysierenden Aktien und Kryptowährungen
