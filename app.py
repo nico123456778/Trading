@@ -12,10 +12,18 @@ import ta  # Technische Analyse Bibliothek
 import time
 import multitasking
 
+CACHE_FILE = "cached_stock_data.csv"
+
 # 🔥 Maximal 5 gleichzeitige Downloads, um API-Rate-Limits zu vermeiden
 multitasking.set_max_threads(5)
 
 @multitasking.task
+def load_cached_data():
+    """Lädt gespeicherte Daten, falls vorhanden"""
+    if os.path.exists(CACHE_FILE):
+        return pd.read_csv(CACHE_FILE)
+    return pd.DataFrame(columns=["Ticker", "Close"])
+
 def fetch_data_with_cache(ticker):
     """Lädt Aktien-Daten nur, wenn sie nicht bereits gespeichert wurden"""
     existing_data = load_cached_data()
