@@ -170,15 +170,17 @@ from fastapi.requests import Request
 @app.get("/", include_in_schema=False)
 @app.head("/", include_in_schema=False)
 def serve_index(request: Request):
-
     if "text/html" in request.headers.get("accept", ""):
-      return FileResponse("static/index.html")
+        return FileResponse("static/index.html")
+    
+    try:
+        best_asset, score = select_best_asset()
+    except Exception as e:
+        print(f"❌ Fehler in select_best_asset: {e}")
+        return {"error": "Interner Fehler bei der Auswahl des besten Assets"}
+    
+    return {"best_asset": best_asset, "score": score, "full_list": stock_list}  # ✅ Fehlende Rückgabe hinzugefügt
 
-   try:
-       best_asset, score = select_best_asset()
-   except Exception as e:
-       print(f"❌ Fehler in select_best_asset: {e}")
-       return {"error": "Interner Fehler bei der Auswahl des besten Assets"}
 
 
 @app.get("/api/empfohlene_aktie")
