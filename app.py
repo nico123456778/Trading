@@ -17,13 +17,14 @@ CACHE_FILE = "cached_stock_data.csv"
 # 🔥 Maximal 5 gleichzeitige Downloads, um API-Rate-Limits zu vermeiden
 multitasking.set_max_threads(5)
 
-@multitasking.task
+
 def load_cached_data():
     """Lädt gespeicherte Daten, falls vorhanden"""
     if os.path.exists(CACHE_FILE):
         return pd.read_csv(CACHE_FILE)
     return pd.DataFrame(columns=["Ticker", "Close"])
 
+@multitasking.task
 def fetch_data_with_cache(ticker):
     """Lädt Aktien-Daten nur, wenn sie nicht bereits gespeichert wurden"""
     existing_data = load_cached_data()
@@ -180,7 +181,7 @@ def select_best_asset():
             print(f"📈 Berechnete Indikatoren für {ticker}: {df.to_dict(orient='records')}")  # Debugging
             
             # Vorhersage mit KI-Modell
-            prediction = model.predict(df)[0] if model else 0
+            prediction = model.predict(df)[0] if model and not df.isnull().values.any() else 0
             sentiment = get_news_sentiment(ticker)
             final_score = prediction + sentiment
 
@@ -257,6 +258,13 @@ def debug_model():
     try:
         test_data = pd.DataFrame([[150, 55, 0.5, 200, 210]], columns=["close", "RSI", "MACD", "SMA50", "SMA200"])
         prediction = int(model.predict(test_data)[0])
+
+        for ticker in stock_list:
+    fetch_data_with_cache(ticker)
+
+multitasking.wait_for_tasks()  # 🔥 Warten, bis alle parallelen Tasks fertig sind
+
         return {"test_prediction": prediction}
     except Exception as e:
         return {"error": str(e)}
+
