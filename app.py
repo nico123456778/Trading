@@ -112,7 +112,7 @@ def select_best_asset():
             print(f"📊 Lade Daten für {ticker} ...")  # Debugging-Log
             data = yf.download(ticker, period="7d", interval="1d")
 
-           if data is None or data.empty or "Close" not in data.columns:
+            if data is None or data.empty or "Close" not in data.columns:
               print(f"⚠️ Keine gültigen Daten für {ticker} erhalten, überspringe...")
               continue
 
