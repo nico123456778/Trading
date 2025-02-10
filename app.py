@@ -71,7 +71,6 @@ def get_news_sentiment(query):
 # Auswahl der besten Aktie/Krypto
 def select_best_asset():
     global global_scores  # WICHTIG: Globale Variable setzen
-    global_scores = []  # Zurücksetzen, um doppelte Einträge zu vermeiden
     scores = []  # Lokale Liste für Berechnungen
 
     
@@ -105,7 +104,9 @@ def select_best_asset():
 
             print(f"🤖 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")  # Debugging
 
-            scores.append((ticker, final_score))
+           scores.append((ticker, final_score))
+           global_scores.append((ticker, final_score))  # Hinzufügen zu global_scores
+
 
         except Exception as e:
             print(f"❌ Fehler bei {ticker}: {e}")
