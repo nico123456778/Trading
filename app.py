@@ -26,11 +26,44 @@ app.add_middleware(
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
-# Aktien- und Krypto-Listen
-STOCK_LIST = [
-    "AAPL", "MSFT", "TSLA", "NVDA", "AMZN", "GOOGL", "META", "NFLX", "MMM", "ABT", "ABBV", "ABMD", "ACN", "ATVI", "ADBE", "AMD", "AAP", "AES", "AFL", "A", "APD", "AKAM", "ALK", "ALB", "ARE", "ALGN", "ALLE", "LNT", "ALL", "GOOGL", "GOOG", "MO", "AMZN", "AMCR", "AEE", "AAL", "AEP", "AXP", "AIG", "AMT", "AWK", "AMP", "ABC", "AME", "AMGN", "APH", "ADI", "ANSS", "AON", "APA", "AAPL", "AMAT", "APTV", "ANET", "AJG", "AIZ", "T", "ATO", "ADSK", "AZO", "AVB", "AVY", "BKR", "BALL", "BAC", "BBWI", "BAX", "BDX", "BRK.B", "BBY", "BIO", "TECH", "BIIB", "BLK", "BK", "BA", "BKNG", "BWA", "BXP", "BSX", "BMY", "AVGO", "BR", "BRO", "BF.B", "CHRW", "CDNS", "CZR", "CPB", "COF", "CAH", "KMX", "CCL", "CARR", "CTLT", "CAT", "CBOE", "CBRE", "CDW", "CE", "CNC", "CNP", "CDAY", "CERN", "CF", "CRL", "SCHW", "CHTR", "CVX", "CMG", "CB", "CHD", "CI", "CINF", "CTAS", "CSCO", "C"]
-CRYPTO_LIST = ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD", "DOT-USD", "MATIC-USD", "XLM-USD", "ADA-USD", "DOGE-USD", "LTC-USD", "BCH-USD", "UNI-USD", "LINK-USD", "XMR-USD", "ETC-USD", "VET-USD", "FIL-USD", "TRX-USD", "EOS-USD", "XTZ-USD", "ATOM-USD", "AAVE-USD", "MKR-USD", "ALGO-USD", "DASH-USD", "ZEC-USD"]
-ASSET_LIST = STOCK_LIST + CRYPTO_LIST
+# Liste der zu analysierenden Aktien und Kryptowährungen
+stock_list = [
+    # S&P 500 Aktien
+    "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "BRK.B", "JPM",
+    "V", "JNJ", "PG", "UNH", "XOM", "HD", "MA", "PFE", "ABBV", "CVX", "KO",
+    "PEP", "MRK", "BAC", "DIS", "NFLX", "INTC", "CMCSA", "ADBE", "T", "CRM",
+    "MCD", "COST", "NKE", "WMT", "IBM", "QCOM", "HON", "ORCL", "AMD", "CAT",
+    "BA", "MMM", "GE", "TXN", "LMT", "GS", "USB", "PYPL", "F", "GM", "DUK",
+    "SO", "SBUX", "CSCO", "MDT", "NEE", "UPS", "LOW", "TGT", "AXP", "CI",
+    "BLK", "REGN", "VRTX", "ADP", "DE", "ISRG", "CVS", "ETN", "SPGI", "ICE",
+    "NOW", "GILD", "CME", "MO", "HUM", "PNC", "DHR", "SCHW", "AMT", "TMO",
+    
+    # DAX 40 Aktien
+    "SAP.DE", "DTE.DE", "SIE.DE", "BAYN.DE", "VOW3.DE", "ALV.DE", "BAS.DE",
+    "ADS.DE", "BMW.DE", "FRE.DE", "MUV2.DE", "RWE.DE", "LIN.DE", "DBK.DE",
+    "DHER.DE", "BEI.DE", "MTX.DE", "HEN3.DE", "HFG.DE", "HEI.DE", "CON.DE",
+    "ENR.DE", "1COV.DE", "SHL.DE", "ZAL.DE", "SY1.DE", "AIR.DE", "IFX.DE",
+    "PUM.DE", "WDI.DE", "LEG.DE", "EVD.DE", "MRK.DE", "TLX.DE", "BNR.DE",
+    "RIB.DE", "WCH.DE", "TEG.DE", "EVK.DE", "HNR1.DE",
+    
+    # Internationale Aktien
+    "BABA", "TSM", "NIO", "TCEHY", "SNY", "ASML", "RY", "TD", "SHOP", "SU",
+    "BIDU", "SNP", "BP", "RIO", "BHP", "NVS", "ORAN", "SIEGY", "EONGY",
+    "UBS", "CSGN", "ABB", "NESN", "RDSB", "BP.L", "HSBA.L", "BARC.L", "LLOY.L",
+    
+    # Kryptowährungen
+    "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD", "DOT-USD", "MATIC-USD",
+    "XLM-USD", "ADA-USD", "DOGE-USD", "LTC-USD", "BCH-USD", "UNI-USD", "LINK-USD",
+    "XMR-USD", "ETC-USD", "VET-USD", "FIL-USD", "TRX-USD", "EOS-USD", "XTZ-USD",
+    "ATOM-USD", "AAVE-USD", "MKR-USD", "ALGO-USD", "DASH-USD", "ZEC-USD"
+]
+
+print("Folgende Werte werden von der KI analysiert:")
+for ticker in stock_list:
+    print("-", ticker)
+print(f"Gesamtanzahl: {len(stock_list)}")
+
+
 
 # KI-Modell laden mit Debugging
 model_path = "Trading_KI/models/stock_model.pkl"
