@@ -106,6 +106,9 @@ def select_best_asset():
         except Exception as e:
             print(f"❌ Fehler bei {ticker}: {e}")
             continue
+            print(f"🔎 DEBUG: scores = {scores}")  # Gibt alle berechneten Aktien aus
+            print(f"🔎 DEBUG: best_asset = {best_asset}")  # Gibt die beste Aktie aus
+
 
     # Falls Scores existieren, beste Aktie/Krypto auswählen
     if scores:
