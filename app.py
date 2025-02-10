@@ -193,7 +193,7 @@ if model and not df.isnull().values.any():
         scores.append((ticker, final_score))
         global_scores.append((ticker, final_score))  # Hinzufügen zu global_scores
         
-    except Exception as e:  # 🔥 Richtig eingerückt
+     except Exception as e:  # 🔥 Richtig eingerückt
         print(f"❌ Fehler bei der Modellvorhersage: {e}")  # 🔥 Richtig eingerückt
 
 # 🔥 Debug-Informationen hier außerhalb des `except`-Blocks setzen
