@@ -181,7 +181,13 @@ def select_best_asset():
             print(f"📈 Berechnete Indikatoren für {ticker}: {df.to_dict(orient='records')}")  # Debugging
             
             # Vorhersage mit KI-Modell
-            prediction = model.predict(df)[0] if model and not df.isnull().values.any() else 0
+           prediction = 0
+           if model and not df.isnull().values.any():
+    try:
+           prediction = model.predict(df)[0]
+           except Exception as e:
+           print(f"❌ Fehler bei der Modellvorhersage: {e}")
+
             sentiment = get_news_sentiment(ticker)
             final_score = prediction + sentiment
 
@@ -268,6 +274,15 @@ def debug_model():
 
     except Exception as e:
         return {"error": str(e)}
+
+    # Starte Datenabruf nur, wenn das Modell erfolgreich geladen wurde
+if model:
+    print("📊 Starte parallelen Datenabruf...")
+    for ticker in stock_list:
+        fetch_data_with_cache(ticker)
+
+    multitasking.wait_for_tasks()  # 🔥 Warten, bis alle parallelen Tasks fertig sind
+
 
     except Exception as e:
         return {"error": str(e)}
