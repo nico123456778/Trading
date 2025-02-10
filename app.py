@@ -86,10 +86,11 @@ def select_best_asset():
             # Berechnung der technischen Indikatoren
             df = pd.DataFrame({
                 "Close": [data["Close"].iloc[-1]],  # In eine Liste setzen, um 1D-Array zu vermeiden
-                "RSI": [ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]],
-                "MACD": [ta.trend.MACD(data["Close"]).macd().dropna().values[-1]],
-                "SMA50": [ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1]],
-                "SMA200": [ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1]]
+                "RSI": ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1].item(),
+                "MACD": ta.trend.MACD(data["Close"]).macd().dropna().values[-1].item(),
+                "SMA50": ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1].item(),
+                "SMA200": ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1].item(),
+
             })
 
             print(f"📈 Berechnete Indikatoren für {ticker}: {df.to_dict(orient='records')}")  # Debugging
