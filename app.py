@@ -135,6 +135,21 @@ def serve_index(request: Request):
         best_asset, score = select_best_asset()
         return {"best_asset": best_asset, "score": score, "full_list": ASSET_LIST}
 
+@app.get("/api/empfohlene_aktie")
+def get_recommended_stock():
+    """ Gibt die beste Aktie aus der Analyse zurück """
+    if not scores:
+        return {"error": "Keine Daten verfügbar"}
+
+    best_stock = max(scores, key=lambda x: x[1], default=(None, 0))
+    
+    return {
+        "ticker": best_stock[0],
+        "indikatoren": {
+            "RSI": best_stock[1],  # Falls du hier andere Werte brauchst, anpassen!
+        }
+    }
+
 @app.get("/debug_model")
 def debug_model():
     if model is None:
