@@ -183,7 +183,7 @@ def select_best_asset():
             # Vorhersage mit KI-Modell
            prediction = 0
            if model and not df.isnull().values.any():
-    try:
+       try:
            prediction = model.predict(df)[0]
            except Exception as e:
            print(f"❌ Fehler bei der Modellvorhersage: {e}")
@@ -284,6 +284,5 @@ if model:
     multitasking.wait_for_tasks()  # 🔥 Warten, bis alle parallelen Tasks fertig sind
 
 
-    except Exception as e:
-        return {"error": str(e)}
+   
 
