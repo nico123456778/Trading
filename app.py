@@ -120,7 +120,7 @@ def select_best_asset():
             
             # Berechnung der technischen Indikatoren
             df = pd.DataFrame({
-               "Close": [float(data["Close"].iloc[-1])],  # Sicherstellen, dass es ein Float ist
+               "Close": [float(data["Close"].iloc[-1].astype(float).item())],  # Sicherstellen, dass es ein Float ist
                "RSI": float(ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]) if not ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().empty else None,
                "MACD": float(ta.trend.MACD(data["Close"]).macd().dropna().values[-1]) if not ta.trend.MACD(data["Close"]).macd().dropna().empty else None,
                "SMA50": float(ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1]) if not ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().empty else None,
