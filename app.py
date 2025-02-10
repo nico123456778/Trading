@@ -185,8 +185,8 @@ def select_best_asset():
            if model and not df.isnull().values.any():
        try:
            prediction = model.predict(df)[0]
-           except Exception as e:
-           print(f"❌ Fehler bei der Modellvorhersage: {e}")
+       except Exception as e:
+            print(f"❌ Fehler bei der Modellvorhersage: {e}")
 
             sentiment = get_news_sentiment(ticker)
             final_score = prediction + sentiment
@@ -208,10 +208,10 @@ def select_best_asset():
     if scores:
         best_asset = max(scores, key=lambda x: x[1])
         print(f"🏆 Beste Aktie/Krypto: {best_asset[0]} mit Score {best_asset[1]}")  # Debugging
-        return best_asset
+         return best_asset
     else:
-        print("⚠️ Keine geeignete Aktie/Krypto gefunden.")
-        return None, 0.0
+         print("⚠️ Keine geeignete Aktie/Krypto gefunden.")
+    return None, 0.0
 
 
 
@@ -281,7 +281,7 @@ if model:
     for ticker in stock_list:
         fetch_data_with_cache(ticker)
 
-    multitasking.wait_for_tasks()  # 🔥 Warten, bis alle parallelen Tasks fertig sind
+multitasking.wait_for_tasks()  # 🔥 Warten, bis alle parallelen Tasks fertig sind
 
 
    
