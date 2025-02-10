@@ -70,7 +70,10 @@ def get_news_sentiment(query):
 
 # Auswahl der besten Aktie/Krypto
 def select_best_asset():
-    scores = []
+    global global_scores  # WICHTIG: Globale Variable setzen
+    global_scores = []  # Zurücksetzen, um doppelte Einträge zu vermeiden
+    scores = []  # Lokale Liste für Berechnungen
+
     
     for ticker in ASSET_LIST:
         try:
@@ -142,15 +145,17 @@ def serve_index(request: Request):
 @app.get("/api/empfohlene_aktie")
 def get_recommended_stock():
     """ Gibt die beste Aktie aus der Analyse zurück """
-    if not scores:
+    global global_scores  # WICHTIG: Globale Variable verwenden!
+
+    if not global_scores:
         return {"error": "Keine Daten verfügbar"}
 
-    best_stock = max(scores, key=lambda x: x[1], default=(None, 0))
-    
+    best_stock = max(global_scores, key=lambda x: x[1], default=(None, 0))
+
     return {
         "ticker": best_stock[0],
         "indikatoren": {
-            "RSI": best_stock[1],  # Falls du hier andere Werte brauchst, anpassen!
+            "RSI": best_stock[1],
         }
     }
 
