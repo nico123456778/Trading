@@ -11,6 +11,7 @@ from textblob import TextBlob
 import ta  # Technische Analyse Bibliothek
 import time
 import threading
+import time
 
 global_scores = []
 
@@ -168,15 +169,24 @@ def select_best_asset():
         return None, 0.0
 
 
+
 def fetch_all_data():
     print("🚀 Starte das Laden der Aktien...")
     for ticker in stock_list:
-        fetch_data_with_cache(ticker)  # Holt die Daten pro Aktie
-        time.sleep(1)  # 🔥 WICHTIG: Wartezeit einbauen, um API-Sperren zu vermeiden
+        fetch_data_with_cache(ticker)
+        wait_time = random.uniform(1, 3)  # 🔥 Verhindert API-Sperren
+        print(f"⏳ Warte {wait_time:.2f} Sekunden, um API-Sperren zu vermeiden...")
+        time.sleep(wait_time)
     print("✅ Alle Aktien-Daten wurden geladen!")
 
-# Starte das Laden der Daten als Hintergrund-Thread
-threading.Thread(target=fetch_all_data, daemon=True).start()
+# Hintergrund-Thread starten
+thread = threading.Thread(target=fetch_all_data, daemon=True)
+thread.start()
+
+# 🔥 Endlosschleife, damit die App nicht stoppt
+while True:
+    time.sleep(10)  # App bleibt aktiv
+
 
 @app.get("/")
 def get_recommended_stock():
