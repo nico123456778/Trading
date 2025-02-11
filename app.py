@@ -198,7 +198,7 @@ if df.isnull().values.any():
     print(f"⚠️ NaN-Werte gefunden für {ticker}: {df.to_dict(orient='records')}")
     continue  # Aktie wird übersprungen, falls NaN enthalten ist
 
-prediction = 0
+prediction = 0  # Default-Wert
 
 if model:
     ### 🔥 NEU: Test-Prediction mit Dummy-Werten
@@ -216,13 +216,19 @@ if model:
         print(f"❌ Fehler bei Test-Prediction: {e}")
 
     ### 🔥 Falls das Modell gültig ist, Vorhersage für echte Daten durchführen
-    prediction = model.predict(df)[0]
-    sentiment = get_news_sentiment(ticker)
+    try:
+        prediction = model.predict(df)[0]
+    except Exception as e:
+        print(f"❌ Fehler bei der Modellvorhersage für {ticker}: {e}")
+        prediction = 0  # Falls Fehler, setzen wir Prediction auf 0
+
+# 🔥 Falls `get_news_sentiment()` keinen Wert liefert, setzen wir Standardwert 0.1
+sentiment = get_news_sentiment(ticker)
 if sentiment is None:
-    sentiment = 0.1  # Falls kein Sentiment gefunden, geben wir eine kleine positive Bewertung
+    sentiment = 0.1  # Falls kein Sentiment gefunden, setzen wir eine kleine positive Bewertung
 
-final_score = prediction + sentiment  # 🔥 final_score IMMER berechnen!
-
+# 🔥 final_score IMMER berechnen!
+final_score = prediction + sentiment  
 
 # Falls RSI unter 50 ist (aber nicht zu niedrig), geben wir einen kleinen Bonus
 if df["RSI"].iloc[0] < 50:
@@ -232,17 +238,33 @@ if df["RSI"].iloc[0] < 50:
 if df["MACD"].iloc[0] > 0:
     final_score += 0.3  
 
+# 🔥 Debugging-Log für Endbewertung
+print(f"🤖 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")  
 
-    print(f"🤖 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")  # Debugging
-
+# 🔥 final_score darf nicht None sein, bevor es gespeichert wird
+if final_score is not None:
     scores.append((ticker, final_score))
     global_scores.append((ticker, final_score))
+else:
+    print(f"❌ Fehler: final_score für {ticker} ist None und wurde nicht gespeichert!")
 
-        except Exception as e:
-            print(f"❌ Fehler bei der Modellvorhersage: {e}")
+except Exception as e:
+    print(f"❌ Fehler bei der Modellvorhersage: {e}")
 
+# 🔥 Beste Aktie auswählen, wenn mindestens eine Aktie bewertet wurde
 if scores:
     best_asset = max(scores, key=lambda x: x[1])
+
+    # Falls alle Scores unter 0 sind, trotzdem eine Empfehlung ausgeben
+    if best_asset[1] < 0:
+        print(f"⚠️ Alle Scores sind niedrig, aber wir wählen trotzdem {best_asset[0]}")
+
+    print(f"🏆 Beste Aktie/Krypto: {best_asset[0]} mit Score {best_asset[1]}")
+    return best_asset
+else:
+    print("⚠️ Keine geeignete Aktie/Krypto gefunden. Alle Scores: ", scores)
+    return None, 0.0
+
 
     # Falls alle Scores unter 0 sind, trotzdem eine Empfehlung ausgeben
     if best_asset[1] < 0:
