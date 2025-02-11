@@ -11,6 +11,7 @@ from textblob import TextBlob
 import ta  # Technische Analyse Bibliothek
 import time
 import threading
+import random
 
 
 global_scores = []
