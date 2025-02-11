@@ -10,14 +10,11 @@ import joblib
 from textblob import TextBlob
 import ta  # Technische Analyse Bibliothek
 import time
-import multitasking
+import threading
 
 global_scores = []
 
 CACHE_FILE = "cached_stock_data.csv"
-
-# 🔥 Maximal 5 gleichzeitige Downloads, um API-Rate-Limits zu vermeiden
-multitasking.set_max_threads(5)
 
 
 def load_cached_data():
@@ -27,7 +24,6 @@ def load_cached_data():
     return pd.DataFrame(columns=["Ticker", "Close"])
 
 
-@multitasking.task
 def fetch_data_with_cache(ticker):
     """Lädt Aktien-Daten nur, wenn sie nicht bereits gespeichert wurden"""
     existing_data = load_cached_data()
@@ -172,6 +168,16 @@ def select_best_asset():
         return None, 0.0
 
 
+def fetch_all_data():
+    print("🚀 Starte das Laden der Aktien...")
+    for ticker in stock_list:
+        fetch_data_with_cache(ticker)  # Holt die Daten pro Aktie
+        time.sleep(1)  # 🔥 WICHTIG: Wartezeit einbauen, um API-Sperren zu vermeiden
+    print("✅ Alle Aktien-Daten wurden geladen!")
+
+# Starte das Laden der Daten als Hintergrund-Thread
+threading.Thread(target=fetch_all_data, daemon=True).start()
+
 @app.get("/")
 def get_recommended_stock():
     """ Gibt die beste Aktie aus der Analyse zurück """
@@ -190,10 +196,4 @@ def get_recommended_stock():
     }
 
 
-# Starte parallelen Datenabruf
-if model:
-    print("📊 Starte parallelen Datenabruf...")
-    for ticker in stock_list:
-        fetch_data_with_cache(ticker)
 
-multitasking.wait_for_tasks()  # 🔥 Warten, bis alle parallelen Tasks fertig sind
