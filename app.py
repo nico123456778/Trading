@@ -11,7 +11,7 @@ from textblob import TextBlob
 import ta  # Technische Analyse Bibliothek
 import time
 import threading
-import time
+
 
 global_scores = []
 
@@ -122,7 +122,9 @@ def get_news_sentiment(query):
 # Auswahl der besten Aktie/Krypto
 def select_best_asset():
     global global_scores  # WICHTIG: Globale Variable setzen
+    global_scores.clear()  # 🔥 ALTE WERTE LÖSCHEN, DAMIT NUR DIE NEUSTE ANALYSE DRIN BLEIBT
     scores = []  # Lokale Liste für Berechnungen
+
 
     for ticker in stock_list:
         try:
