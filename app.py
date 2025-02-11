@@ -155,11 +155,9 @@ def get_news_sentiment(query):
 
 
 # Auswahl der besten Aktie/Krypto
-def select_best_asset():
-    global global_scores  # WICHTIG: Globale Variable setzen
-    global_scores.clear()  # 🔥 ALTE WERTE LÖSCHEN, DAMIT NUR DIE NEUSTE ANALYSE DRIN BLEIBT
-    scores = []  # Lokale Liste für Berechnungen
-
+def select_best_asset(stock_list):
+    scores = []
+    global_scores.clear()  # Globaler Score-Cache leeren
 
     for ticker in stock_list:
         try:
@@ -170,9 +168,6 @@ def select_best_asset():
                 print(f"⚠️ Keine gültigen Daten für {ticker} erhalten, überspringe...")
                 continue
 
-            print(data.tail())  # Debugging-Log für letzte Zeilen der Daten
-
-            # Berechnung der technischen Indikatoren
             df = pd.DataFrame({
                 "Close": float(data["Close"].iloc[-1]),
                 "RSI": float(ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]),
@@ -181,100 +176,68 @@ def select_best_asset():
                 "SMA200": float(ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1]),
             }, index=[0])
 
+            # 🔥 RSI & MACD für jede Aktie berechnen
+            if df["RSI"].iloc[0] < 30:
+                print(f"⚠️ {ticker} ist stark überverkauft! Möglicher Kauf-Kandidat.")
+            elif df["RSI"].iloc[0] > 70:
+                print(f"⚠️ {ticker} ist stark überkauft! Risiko beachten.")
 
-if df["RSI"].iloc[0] < 30:
-    print(f"⚠️ {ticker} ist stark überverkauft! Möglicher Kauf-Kandidat.")
-elif df["RSI"].iloc[0] > 70:
-    print(f"⚠️ {ticker} ist stark überkauft! Risiko beachten.")
+            if df["MACD"].iloc[0] > 0:
+                print(f"✅ {ticker} zeigt ein bullisches Signal laut MACD.")
 
-if df["MACD"].iloc[0] > 0:
-    print(f"✅ {ticker} zeigt ein bullisches Signal laut MACD.")
+            # 🔥 Überprüfen, ob NaN-Werte enthalten sind
+            if df.isnull().values.any():
+                print(f"⚠️ NaN-Werte gefunden für {ticker}: {df.to_dict(orient='records')}")
+                continue  # Aktie überspringen, falls NaN enthalten ist
 
+            # 🔥 Modellvorhersage mit Fehlerbehandlung
+            prediction = 0
+            if model:
+                try:
+                    prediction = model.predict(df)[0]
+                except Exception as e:
+                    print(f"❌ Fehler bei der Modellvorhersage für {ticker}: {e}")
+                    prediction = 0  # Falls Fehler, setzen wir Prediction auf 0
 
-print(f"📊 Berechnete Indikatoren für {ticker}: {df.to_dict(orient='records')}")  # Debugging
+            # 🔥 Sentiment-Analyse mit Fallback
+            sentiment = get_news_sentiment(ticker)
+            if sentiment is None:
+                sentiment = 0.1  # Falls kein Sentiment gefunden, setzen wir eine kleine positive Bewertung
 
-### 🔥 NEU: Prüfen, ob es `NaN`-Werte gibt, die das Modell blockieren könnten
-if df.isnull().values.any():
-    print(f"⚠️ NaN-Werte gefunden für {ticker}: {df.to_dict(orient='records')}")
-    continue  # Aktie wird übersprungen, falls NaN enthalten ist
+            # 🔥 final_score berechnen und anpassen
+            final_score = prediction + sentiment
+            if df["RSI"].iloc[0] < 50:
+                final_score += 0.2  # Bonus für RSI < 50
+            if df["MACD"].iloc[0] > 0:
+                final_score += 0.3  # Bonus für bullisches Signal
 
-prediction = 0  # Default-Wert
+            # 🔥 Debugging-Log für Endbewertung
+            print(f"🤖 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")
 
-if model:
-    ### 🔥 NEU: Test-Prediction mit Dummy-Werten
-    try:
-        test_df = pd.DataFrame({
-            "Close": [100],
-            "RSI": [50],
-            "MACD": [0.5],
-            "SMA50": [98],
-            "SMA200": [95],
-        })
-        test_prediction = model.predict(test_df)[0]
-        print(f"✅ Test-Prediction des Modells (sollte sinnvoll sein): {test_prediction}")
-    except Exception as e:
-        print(f"❌ Fehler bei Test-Prediction: {e}")
+            # 🔥 final_score nur speichern, wenn er gültig ist
+            if final_score is not None:
+                scores.append((ticker, final_score))
+                global_scores.append((ticker, final_score))
+            else:
+                print(f"❌ Fehler: final_score für {ticker} ist None und wurde nicht gespeichert!")
 
-    ### 🔥 Falls das Modell gültig ist, Vorhersage für echte Daten durchführen
-    try:
-        prediction = model.predict(df)[0]
-    except Exception as e:
-        print(f"❌ Fehler bei der Modellvorhersage für {ticker}: {e}")
-        prediction = 0  # Falls Fehler, setzen wir Prediction auf 0
+        except Exception as e:
+            print(f"❌ Fehler bei der Analyse von {ticker}: {e}")
 
-# 🔥 Falls `get_news_sentiment()` keinen Wert liefert, setzen wir Standardwert 0.1
-sentiment = get_news_sentiment(ticker)
-if sentiment is None:
-    sentiment = 0.1  # Falls kein Sentiment gefunden, setzen wir eine kleine positive Bewertung
+    # 🔥 Beste Aktie auswählen, wenn mindestens eine Aktie bewertet wurde
+    if scores:
+        best_asset = max(scores, key=lambda x: x[1])
 
-# 🔥 final_score IMMER berechnen!
-final_score = prediction + sentiment  
+        # Falls alle Scores unter 0 sind, trotzdem eine Empfehlung ausgeben
+        if best_asset[1] < 0:
+            print(f"⚠️ Alle Scores sind niedrig, aber wir wählen trotzdem {best_asset[0]}")
 
-# Falls RSI unter 50 ist (aber nicht zu niedrig), geben wir einen kleinen Bonus
-if df["RSI"].iloc[0] < 50:
-    final_score += 0.2  
+        print(f"🏆 Beste Aktie/Krypto: {best_asset[0]} mit Score {best_asset[1]}")
+        return best_asset
+    else:
+        print("⚠️ Keine geeignete Aktie/Krypto gefunden. Alle Scores: ", scores)
+        return None, 0.0
 
-# Falls MACD positiv ist, geben wir einen noch stärkeren Bonus
-if df["MACD"].iloc[0] > 0:
-    final_score += 0.3  
-
-# 🔥 Debugging-Log für Endbewertung
-print(f"🤖 KI-Einschätzung für {ticker}: Prediction={prediction}, Sentiment={sentiment}, Final Score={final_score}")  
-
-# 🔥 final_score darf nicht None sein, bevor es gespeichert wird
-if final_score is not None:
-    scores.append((ticker, final_score))
-    global_scores.append((ticker, final_score))
-else:
-    print(f"❌ Fehler: final_score für {ticker} ist None und wurde nicht gespeichert!")
-
-except Exception as e:
-    print(f"❌ Fehler bei der Modellvorhersage: {e}")
-
-# 🔥 Beste Aktie auswählen, wenn mindestens eine Aktie bewertet wurde
-if scores:
-    best_asset = max(scores, key=lambda x: x[1])
-
-    # Falls alle Scores unter 0 sind, trotzdem eine Empfehlung ausgeben
-    if best_asset[1] < 0:
-        print(f"⚠️ Alle Scores sind niedrig, aber wir wählen trotzdem {best_asset[0]}")
-
-    print(f"🏆 Beste Aktie/Krypto: {best_asset[0]} mit Score {best_asset[1]}")
-    return best_asset
-else:
-    print("⚠️ Keine geeignete Aktie/Krypto gefunden. Alle Scores: ", scores)
-    return None, 0.0
-
-
-    # Falls alle Scores unter 0 sind, trotzdem eine Empfehlung ausgeben
-    if best_asset[1] < 0:
-        print(f"⚠️ Alle Scores sind niedrig, aber wir wählen trotzdem {best_asset[0]}")
-
-    print(f"🏆 Beste Aktie/Krypto: {best_asset[0]} mit Score {best_asset[1]}")
-    return best_asset
-else:
-    print("⚠️ Keine geeignete Aktie/Krypto gefunden. Alle Scores: ", scores)
-    return None, 0.0
 
 
 
