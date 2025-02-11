@@ -173,13 +173,14 @@ def select_best_asset():
             print(data.tail())  # Debugging-Log für letzte Zeilen der Daten
 
             # Berechnung der technischen Indikatoren
-           df = pd.DataFrame({
-    "Close": float(data["Close"].iloc[-1]),
-    "RSI": float(ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]),
-    "MACD": float(ta.trend.MACD(data["Close"]).macd().dropna().values[-1]),
-    "SMA50": float(ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1]),
-    "SMA200": float(ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1]),
-}, index=[0])
+            df = pd.DataFrame({
+                "Close": float(data["Close"].iloc[-1]),
+                "RSI": float(ta.momentum.RSIIndicator(data["Close"]).rsi().dropna().values[-1]),
+                "MACD": float(ta.trend.MACD(data["Close"]).macd().dropna().values[-1]),
+                "SMA50": float(ta.trend.SMAIndicator(data["Close"], window=50).sma_indicator().dropna().values[-1]),
+                "SMA200": float(ta.trend.SMAIndicator(data["Close"], window=200).sma_indicator().dropna().values[-1]),
+            }, index=[0])
+
 
 if df["RSI"].iloc[0] < 30:
     print(f"⚠️ {ticker} ist stark überverkauft! Möglicher Kauf-Kandidat.")
@@ -220,7 +221,8 @@ if model:
 if sentiment is None:
     sentiment = 0.1  # Falls kein Sentiment gefunden, geben wir eine kleine positive Bewertung
 
-    final_score = prediction + sentiment
+final_score = prediction + sentiment  # 🔥 final_score IMMER berechnen!
+
 
 # Falls RSI unter 50 ist (aber nicht zu niedrig), geben wir einen kleinen Bonus
 if df["RSI"].iloc[0] < 50:
@@ -239,9 +241,9 @@ if df["MACD"].iloc[0] > 0:
         except Exception as e:
             print(f"❌ Fehler bei der Modellvorhersage: {e}")
 
-   if scores:
+if scores:
     best_asset = max(scores, key=lambda x: x[1])
-    
+
     # Falls alle Scores unter 0 sind, trotzdem eine Empfehlung ausgeben
     if best_asset[1] < 0:
         print(f"⚠️ Alle Scores sind niedrig, aber wir wählen trotzdem {best_asset[0]}")
@@ -251,8 +253,6 @@ if df["MACD"].iloc[0] > 0:
 else:
     print("⚠️ Keine geeignete Aktie/Krypto gefunden. Alle Scores: ", scores)
     return None, 0.0
-
-
 
 
 
