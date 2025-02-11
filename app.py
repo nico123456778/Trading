@@ -101,6 +101,10 @@ else:
 
 # Funktion zur Sentiment-Analyse von Finanznachrichten
 def get_news_sentiment(query):
+    if not GOOGLE_API_KEY or not GOOGLE_CSE_ID:
+        print("⚠️ Google API Key fehlt! Sentiment-Analyse deaktiviert.")
+        return 0.0  # Falls kein API-Key, dann neutraler Wert
+    
     try:
         url = f"https://www.googleapis.com/customsearch/v1?q={query}&cx={GOOGLE_CSE_ID}&key={GOOGLE_API_KEY}"
         response = requests.get(url).json()
@@ -114,9 +118,11 @@ def get_news_sentiment(query):
 
         if sentiment_scores:
             return sum(sentiment_scores) / len(sentiment_scores)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"❌ Fehler bei Sentiment-Analyse: {e}")
+
     return 0.0  # Fallback-Sentiment
+
 
 
 # Auswahl der besten Aktie/Krypto
@@ -216,11 +222,12 @@ def get_recommended_stock():
         return {"error": "Noch keine Empfehlung verfügbar"}
 
     return {
-        "ticker": best_stock[0] if best_stock else "Keine Empfehlung",
-        "indikatoren": {
+    "ticker": best_stock[0] if best_stock else "Keine Empfehlung",
+    "indikatoren": {
         "RSI": best_stock[1] if best_stock else 0,
-        }
     }
+}
+
 
 
 
