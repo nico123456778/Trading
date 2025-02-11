@@ -170,6 +170,7 @@ def select_best_asset():
 
 
 
+
 def fetch_all_data():
     print("🚀 Starte das Laden der Aktien...")
     for ticker in stock_list:
@@ -179,31 +180,47 @@ def fetch_all_data():
         time.sleep(wait_time)
     print("✅ Alle Aktien-Daten wurden geladen!")
 
+# 🔄 Wiederholt den Datenabruf alle 4 Stunden
+def run_periodically():
+    while True:
+        fetch_all_data()
+        print("⏳ Warte 4 Stunden, bevor die nächste Analyse startet...")
+        time.sleep(4 * 60 * 60)  # 4 Stunden warten
+
 # Hintergrund-Thread starten
-thread = threading.Thread(target=fetch_all_data, daemon=True)
+thread = threading.Thread(target=run_periodically, daemon=True)
 thread.start()
 
-# 🔥 Endlosschleife, damit die App nicht stoppt
-while True:
-    time.sleep(10)  # App bleibt aktiv
 
+
+last_recommendation_time = 0  # Zeitstempel der letzten Empfehlung
+best_stock = None  # Speichert die letzte empfohlene Aktie
 
 @app.get("/")
 def get_recommended_stock():
-    """ Gibt die beste Aktie aus der Analyse zurück """
-    global global_scores  # WICHTIG: Globale Variable verwenden!
+    """Gibt die beste Aktie basierend auf den letzten 4 Stunden zurück"""
+    global last_recommendation_time, best_stock, global_scores
 
-    if not global_scores:
-        return {"error": "Keine Daten verfügbar"}
-
-    best_stock = max(global_scores, key=lambda x: x[1], default=(None, 0))
+    current_time = time.time()
+    
+    # Prüfe, ob 4 Stunden vergangen sind (4 * 60 * 60 Sekunden)
+    if current_time - last_recommendation_time >= 4 * 60 * 60:
+        if global_scores:
+            best_stock = max(global_scores, key=lambda x: x[1], default=(None, 0))
+            last_recommendation_time = current_time  # Zeit aktualisieren
+            print(f"🔄 Neue Empfehlung erstellt: {best_stock[0]}")
+    
+    if best_stock is None:
+        return {"error": "Noch keine Empfehlung verfügbar"}
 
     return {
-        "ticker": best_stock[0],
+        "ticker": best_stock[0] if best_stock else "Keine Empfehlung",
         "indikatoren": {
-            "RSI": best_stock[1],
+        "RSI": best_stock[1] if best_stock else 0,
         }
     }
+
+
 
 
 
